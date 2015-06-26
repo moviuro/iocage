@@ -10,36 +10,115 @@ __export_props () {
     done
 }
 
-# Set properties ------------------------------------------------------
+# Print an error message to stderr and exit the current shell ----------
+#
+# General note: if a function is called in a subshell, exiting only
+# exits the subshell, not the whole script!
+#
+# $1: error message to display before exiting
+__fatal_error () {
+    echo "  ERROR: $1" 1>&2
+    exit 1
+}
+
+# Require that a given value is not empty ------------------------------
+#
+# If the length of the string value is nonzero, nothing happens.
+# Otherwise, the error is considered fatal. An error description is
+# displayed, and the shell exits with a nonzero exit status.
+#
+# $1: the value to test
+# $2: optional description of the error if the check fails
+#     the default description is "Missing value"
+__require_not_empty () {
+    local _value _description
+
+    _value=$1
+    _description="${2:-Missing value}"
+
+    [ -n "$_value" ] || __fatal_error "$_description"
+}
+
+# Require that the given name is not empty -----------------------------
+#
+# If the name string is empty, a fatal error occurs, printing a message
+# to stderr and exiting the current shell. Otherwise, nothing happens.
+#
+# This function is a specialization of the function __require_not_empty
+# for the common pattern of testing for a missing UUID or tag.
+#
+# $1: the UUID or tag, usually "$_name" by convention
+__require_name_not_empty () {
+    local _name _description
+
+    _name=$1
+    _description="Missing UUID or tag!"
+
+    __require_not_empty "$_name" "$_description"
+}
+
+# Require that the given dataset is not empty --------------------------
+#
+# If the dataset string is empty, a fatal error occurs, printing a
+# message to stderr and exiting the current shell. Otherwise, nothing
+# happens.
+#
+# This function is a specialization of the function __require_not_empty
+# for the common pattern of testing for a UUID or tag that did not match
+# any jails.
+#
+# $1: the dataset, usually "$_dataset" by convention
+# $2: (optional) the UUID or tag that was used to look up the dataset,
+#     usually "$_name" by convention
+#     if omitted, "Dataset" takes its place in the error description
+__require_dataset_not_empty () {
+    local _dataset _name _description
+
+    _dataset=$1
+    _name=$2
+    _description="${_name:-Dataset} not found."
+
+    __require_not_empty "$_dataset" "$_description"
+}
+
+# Require that the given dataset is not "multiple" ---------------------
+#
+# If the dataset string is empty, a fatal error occurs, printing a
+# message to stderr and exiting the current shell. Otherwise, nothing
+# happens.
+#
+# This function is for the common pattern of testing for a UUID prefix
+# matching multiple full UUIDs.
+#
+# $1: the dataset, usually "$_dataset" by convention
+__require_dataset_not_multiple () {
+    local _dataset _description
+
+    _dataset=$1
+    _description="Multiple matching UUIDs."
+
+    [ "$_value" != "multiple" ] || __fatal_error "$_description"
+}
+
+# Set properties -------------------------------------------------------
 __set_jail_prop () {
-    local _name _property _dataset _pname _pval _found _CONF
-    _name="$2"
-    _property="$1"
+    local _property _name _dataset _pname _pval _found _CONF
 
-    if [ -z "$_name" ] || [ -z "$_property" ] ; then
-        echo "  ERROR: Missing property or UUID!"
-        exit 1
-    fi
+    _property=$1
+    __require_not_empty "$_property" "Missing property!"
 
-    _dataset="$(__find_jail $_name)"
+    _name=$2
+    __require_name_not_empty "$_name"
 
-    if [ -z "$_dataset" ] ; then
-        echo "  ERROR: $_name not found."
-        exit 1
-    fi
-
-    if [ "$_dataset" == "multiple" ] ; then
-        echo "  ERROR: Multiple matching UUIDs!"
-        exit 1
-    fi
+    _dataset=$(__find_jail "$_name")
+    __require_dataset_not_empty "$_dataset" "$_name"
+    __require_dataset_not_multiple "$_dataset"
 
     _pname="$(echo $_property|awk 'BEGIN { FS = "=" } ; { print $1 }')"
-    _pval="$(echo $_property|awk 'BEGIN { FS = "=" } ; { print $2 }')"
+    __require_not_empty "$_pname" "Set failed, incorrect property syntax!"
 
-    if [ -z "$_pname" ] || [ -z "$_pval" ] ; then
-        echo "  ERROR: Set failed, incorrect property syntax!"
-        exit 1
-    fi
+    _pval="$(echo $_property|awk 'BEGIN { FS = "=" } ; { print $2 }')"
+    __require_not_empty "$_pval" "Set failed, incorrect property syntax!"
 
     _found="0"
 
@@ -196,7 +275,7 @@ __chroot () {
     chroot ${iocroot}/jails/${_fulluuid}/root $_command
 }
 
-# Fetch release and prepare base ZFS filesystems-----------
+# Fetch release and prepare base ZFS filesystems -----------------------
 __fetch_release () {
     local _rel_exist _default_rel
     _default_rel=$(uname -r|cut -f 1,2 -d'-')
