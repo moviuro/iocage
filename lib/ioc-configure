@@ -10,7 +10,7 @@ __configure_jail () {
            $CONF_CUSTOM
            $CONF_SYNC"
 
-    echo "Configuring jail.."
+    #echo "Configuring jail.."
     for prop in $_CONF ; do
         prop_name=$prop
         eval prop="\$${prop}"
@@ -30,6 +30,10 @@ __configure_jail () {
                 _value="$uuid"
             elif [ "$prop_name" = "jail_zfs_dataset" ] ; then
                 _value="${jail_zfs_dataset}"
+            elif [ "$prop_name" = "release" ] ; then
+                _value="${release}"
+            elif [ "$prop_name" = "hack88" ] ; then
+                _value="${hack88}"
             elif [ "$prop_name" = "vnet0_mac" ] ; then
                 case "$vnet0_mac" in
                     "-")
@@ -62,11 +66,15 @@ __configure_jail () {
                 _value="$prop"
             fi
 
-            echo "** $prop_name=$_value"
-            zfs set org.freebsd.iocage:$prop_name="$_value" $1
-            unset _value
-            if [ "$prop_name" == "tag" ] ; then
-                __link_tag $1
+            if [ "$1" != "generate" ] ; then
+                echo "** $prop_name=$_value"
+                zfs set org.freebsd.iocage:$prop_name="$_value" $1
+                unset _value
+                if [ "$prop_name" == "tag" ] ; then
+                    __link_tag $1
+                fi
+            elif [ "$1" == "generate" ] ; then
+                echo -n "-o org.freebsd.iocage:$prop_name=\"$_value\" "
             fi
         fi
     done
@@ -83,8 +91,12 @@ __configure_jail () {
                 _value="$prop"
             fi
 
-            echo "** $prop_name=$_value"
-            zfs set $prop_name="$_value" $1
+            if [ "$1" != "generate" ] ; then
+                echo "** $prop_name=$_value"
+                zfs set $prop_name="$_value" $1
+            elif [ "$1" == "generate" ] ; then
+                echo -n "-o $prop_name=\"$_value\" "
+            fi
         fi
     done
 }
@@ -109,8 +121,20 @@ EOT
 }
 
 # This is mostly for pkg autoinstall
+# expects fulluuid to be passed in as $1
 __resolv_conf () {
-    cat /etc/resolv.conf
+    local _name _resolver _resolver_default _fulluuid
+    _fulluuid="$1"
+    _default_resolver="$(__get_default_prop resolver)"
+    _resolver="$(__get_jail_prop resolver $_fulluuid)"
+
+    if [ "${_resolver}" != "none" ] ; then
+        echo "${_resolver}" | tr \; \\n
+    elif [ "${_resolver}" == "none" ] && [ "${_default_resolver}" != "none" ] ; then
+        echo "${_default_resolver}" | tr \; \\n
+    else
+        cat /etc/resolv.conf
+    fi
 }
 
 __pkg_install () {
@@ -162,13 +186,17 @@ __reset_jail_props () {
             exit 1
         fi
     fi
+    
     # Cache properties to set again later
     uuid="$(zfs get -H -o value org.freebsd.iocage:host_hostuuid $_dataset)"
-    tag="$(zfs get -H -o value org.freebsd.iocage:tag $_dataset)"
-    vnet0_mac="$(zfs get -H -o value org.freebsd.iocage:vnet0_mac $_dataset)"
-    vnet1_mac="$(zfs get -H -o value org.freebsd.iocage:vnet1_mac $_dataset)"
-    vnet2_mac="$(zfs get -H -o value org.freebsd.iocage:vnet2_mac $_dataset)"
-    vnet3_mac="$(zfs get -H -o value org.freebsd.iocage:vnet3_mac $_dataset)"
+    tag="$iocset_tag"
+    vnet0_mac="$iocset_vnet0_mac"
+    vnet1_mac="$iocset_vnet1_mac"
+    vnet2_mac="$iocset_vnet2_mac"
+    vnet3_mac="$iocset_vnet3_mac"
+    release="$iocset_release"
+    hack88="$iocset_hack88"
+    jail_zfs_dataset="$iocset_jail_zfs_dataset"
 
     __configure_jail $_dataset
 }

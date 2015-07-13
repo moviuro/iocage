@@ -23,16 +23,15 @@ SYNOPSIS
   iocage chroot UUID|TAG [command]
   iocage df
   iocage show property
-  iocage get [property | all ] UUID|TAG
+  iocage get property|all UUID|TAG
   iocage set property=value UUID|TAG
   iocage cap UUID|TAG
   iocage limits [UUID|TAG]
   iocage uncap UUID|TAG
   iocage inuse [UUID|TAG]
-  iocage top UUID|TAG
   iocage snapshot UUID|TAG [UUID|TAG@snapshotname]
   iocage snaplist UUID|TAG
-  iocage snapremove UUID|TAG@snapshotname
+  iocage snapremove UUID|TAG@snapshotname|ALL
   iocage rollback UUID|TAG@snapshotname
   iocage promote UUID|TAG
   iocage runtime UUID|TAG
@@ -262,10 +261,6 @@ SUBCOMMANDS
     Display consumed resources for a jail. Without UUID or TAG dump all resources
     for all running jails in a comma delimited form.
 
-  top UUID|TAG
-
-    Run top(1) and display processes running inside the jail.
-
   snapshot UUID|TAG [UUID|TAG@snapshotname]
 
     Create a ZFS snapshot for jail. If no snapshot name is specified defaults
@@ -280,9 +275,10 @@ SUBCOMMANDS
         RSIZE   - referenced size
         USED    - used space
 
-  snapremove UUID|TAG@snapshotname
+  snapremove UUID|TAG@snapshotname|ALL
 
-    Destroy specified jail snapshot.
+    Destroy specified jail snapshot. If the keyword ALL is specified all snapshots
+    will be destroyed for the jail.
 
   rollback UUID|TAG@snapshotname
 
@@ -339,8 +335,8 @@ SUBCOMMANDS
 
     Import full jail images or differential packages. Images need to be
     present in /iocage/images and packages in /iocage/packages along with
-    along with checksum files. You can use short UUIDs - do not specify the
-    the full filename only the UUID.
+    checksum files. You can use short UUIDs - do not specify the full filename
+    only the UUID.
 
   defaults
 
@@ -432,6 +428,14 @@ PROPERTIES
 
     Setting this property to anything other than none will try to configure a
     default IPv6 route inside a VNET jail.
+
+  resolver=none | nameserver IP;nameserver IP;search domain.local
+
+    Sets the jail's resolver (resolv.conf). Fields must be ; delimited
+    which are translated to newlines in resolv.conf.
+
+    If the resolver is set to none (default) the jail will inherit
+    the hosts resolv.conf file.
 
   ip6.addr, ip6.saddrsel, ip6
     A set of IPv6 options for the prison, the counterparts to
@@ -841,7 +845,7 @@ PROPERTIES
 
   notes="any string"
 
-    Custom notes for miscelanious tagging.
+    Custom notes for miscellaneous tagging.
 
     Default: none
     Source: local
@@ -1337,7 +1341,7 @@ __usage () {
     echo "  iocage create [-b|-c|-e] [release=RELEASE] [pkglist=file] [property=value]"
     echo "  iocage clone UUID|TAG@snapshot [property=value]"
     echo "  iocage destroy [-f] UUID|TAG|ALL"
-    echo "  iocage list [-t]"
+    echo "  iocage list [-t|-r]"
     echo "  iocage start UUID|TAG"
     echo "  iocage stop UUID|TAG"
     echo "  iocage restart UUID|TAG"
@@ -1348,7 +1352,7 @@ __usage () {
     echo "  iocage chroot UUID|TAG [command]"
     echo "  iocage df"
     echo "  iocage show property"
-    echo "  iocage get property|all ] UUID|TAG"
+    echo "  iocage get property|all UUID|TAG"
     echo "  iocage set property=value UUID|TAG"
     echo "  iocage cap UUID|TAG"
     echo "  iocage limits UUID|TAG"
@@ -1357,7 +1361,7 @@ __usage () {
     echo "  iocage top UUID|TAG"
     echo "  iocage snapshot UUID|TAG@snapshotname"
     echo "  iocage snaplist UUID|TAG"
-    echo "  iocage snapremove UUID|TAG@snapshotname"
+    echo "  iocage snapremove UUID|TAG@snapshotname|ALL"
     echo "  iocage rollback UUID|TAG@snapshotname"
     echo "  iocage promote UUID|TAG"
     echo "  iocage runtime UUID|TAG"
