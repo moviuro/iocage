@@ -4,149 +4,182 @@
 __get_next_mac () {
     local _mac_base _mac_offset _calc_mac _mac _mac_postfix
 
-    _mac_base="$(echo $1 | tr '[a-z]' '[A-Z]')"
-    _mac_offset="$(echo "obase=16; $2" | bc)"
+    _mac_base=$(echo "${1}" | tr '[a-z]' '[A-Z]')
+    _mac_offset=$(echo "obase=16; ${2}" | bc)
     _calc_mac=$(echo "obase=16; ibase=16; ${_mac_base} + ${_mac_offset}" | bc)
-    _mac_postfix=$(echo ${_calc_mac} | awk '{print substr($0, length($0)-5, length($0))}')
+    _mac_postfix=$(echo "${_calc_mac}" | awk '{ print substr($0, length($0)-5, length($0)) }')
     _mac="${mac_prefix}${_mac_postfix}"
 
-    echo ${_mac}
+    echo "${_mac}"
+}
+
+# Generate a new set of mac addresses for epair interfaces
+__generate_mac () {
+    local _mac_offset _dataset _uuid _mac_base _mac_epair_a _mac_epair_b _mac
+
+    _mac_offset=${1}
+    _dataset=${2}
+
+    _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _mac_base=$(echo ${_uuid} | awk '{ print substr($0, 0, 6) }')
+    _mac_epair_a=$(__get_next_mac "${_mac_base}" "${_mac_offset}")
+    _mac_epair_b=$(__get_next_mac "${_mac_base}" "${_mac_offset}+1")
+    _mac=${_mac_epair_a},${_mac_epair_b}
+
+    echo "${_mac}"
 }
 
 # Expects input: _nic _mac_offset _epair_leg _uuid
 # outputs a single mac address
 # Example: __validate_mac ${nic} ${_mac_offset} a ${_uuid}
 __validate_mac () {
-    local _nic _uuid _mac _mac_base _mac_offset \
-          _mac_epair_a _mac_epair_b _return
+    local _nic _mac_offset _epair_leg _dataset _mac _return
 
-    _nic="$1"
-    _mac_offset="$2"
-    _epair_leg="$3"
-    _uuid="$4"
-    _mac="$(__get_jail_prop ${_nic}_mac ${_uuid})"
-    _mac_base="$(echo ${_uuid} | awk '{print substr($0, 0, 6)}')"
-    _mac_epair_a="$(__get_next_mac ${_mac_base} ${_mac_offset})"
-    _mac_epair_b="$(__get_next_mac ${_mac_base} ${_mac_offset}+1)"
+    _nic=${1}
+    _mac_offset=${2}
+    _epair_leg=${3}
+    _dataset=${4}
+    _mac=$(__get_dataset_ioc_prop ${_nic}_mac ${_dataset})
 
-    if [ ${_mac} == "none" ] ; then
-        __set_jail_prop ${_nic}_mac="${_mac_epair_a},${_mac_epair_b}" ${_uuid}
+    if [ "${_mac}" == "none" ] ; then
+        _mac=$(__generate_mac ${_mac_offset} ${_dataset})
+        __set_dataset_ioc_prop ${_nic}_mac=${_mac} ${_dataset}
     fi
 
-    if [ ${_epair_leg} == "a" ] ; then
-        _return="$(__get_jail_prop ${_nic}_mac ${_uuid}|cut -f1 -d,)"
-    elif [ ${_epair_leg} == "b" ] ; then
-        _return="$(__get_jail_prop ${_nic}_mac ${_uuid}|cut -f2 -d,)"
+    if [ "${_epair_leg}" == "a" ] ; then
+        _return=${_mac%%,*}
+    elif [ "${_epair_leg}" == "b" ] ; then
+        _return=${_mac#*,}
     fi
 
-    echo ${_return}
+    echo "${_return}"
 }
 
-# Expects $1 for action and $2 for UUID
+# Expects ${1} for action and ${2} for UUID
 __networking () {
-    local _action _uuid _jid _mac_epair_a mac_epair_b \
-          _mac_offset
+    local _action _dataset
+    
+    _action=${1}
+    _dataset=${2}
 
-    _action="$1"
-    _uuid="$2"
-    _jid="$(jls -j ioc-${_uuid} jid)"
-    local ip4="$(__get_jail_prop ip4_addr ${_uuid})"
-    local ip6="$(__get_jail_prop ip6_addr ${_uuid})"
-    local defaultgw="$(__get_jail_prop defaultrouter ${_uuid})"
-    local defaultgw6="$(__get_jail_prop defaultrouter6 ${_uuid})"
-    local nics="$(__get_jail_prop interfaces ${_uuid} \
-               |awk 'BEGIN { FS = "," } ; { print $1,$2,$3,$4 }')"
-    #local ip4_list="$(echo $ip4 | sed 's/,/ /g')"
-    local ip6_list="$(echo $ip6 | sed 's/,/ /g')"
+    case "${_action}" in
+        start) __start_networking ${_dataset};;
+        stop) __stop_networking ${_dataset};;
+        *) __fatal_error "__networking: Invalid action \"${_action}\"";;
+    esac
+}
 
-    if [ ${_action} == "start" ] ; then
-        _mac_offset=0
-        for i in $nics ; do
-            local nic=$(echo $i | awk 'BEGIN { FS = ":" } ; { print $1 }')
-            local bridge=$(echo $i | awk 'BEGIN { FS = ":" } ; { print $2 }')
-            local memberif=$(ifconfig $bridge | grep member | head -n1 | cut -d' ' -f2)
-            local brmtu=$(ifconfig $memberif | head -n1 |cut -d' ' -f6)
-            epair_a=$(ifconfig epair create)
-            epair_b=$(echo $epair_a | sed s/a\$/b/)
-            ifconfig ${epair_a} name ${nic}:${_jid} mtu $brmtu
-            _mac_epair_a="$(__validate_mac ${nic} ${_mac_offset} a ${_uuid})"
-            ifconfig ${nic}:${_jid} link ${_mac_epair_a}
-            ifconfig ${nic}:${_jid} description "associated with jail: ${_uuid}"
-            ifconfig $epair_b vnet ioc-${2}
-            jexec ioc-${2} ifconfig $epair_b name $nic mtu $brmtu
-            _mac_epair_b="$(__validate_mac ${nic} ${_mac_offset} b ${_uuid})"
-            jexec ioc-${2} ifconfig ${nic} link ${_mac_epair_b}
-            ifconfig $bridge addm ${nic}:${_jid} up
-            ifconfig ${nic}:${_jid} up
-            let _mac_offset="_mac_offset + 2" > /dev/null
-        done
+__start_networking () {
+    local _dataset _uuid _jid _ip4 _ip6 _defaultgw _defaultgw6 _nics
+    local _mac_offset _i _nic _bridge _memberif _brmtu _epair_a _epair_b
+    local _mac_epair_a _mac_epair_b _addrs _iface _ip
 
-        if [ "$ip4" != "none" ] ; then
-            local oIFS=$IFS
-            local IFS=","
-            for i in $ip4 ; do
-                local IFS=$oIFS
-                iface="$(echo $i |awk 'BEGIN { FS = "|" } ; { print $1 }')"
-                ip="$(echo $i |awk 'BEGIN { FS = "|" } ; { print $2 }')"
-                jexec ioc-${2} ifconfig $iface $ip up
-                local IFS=","
-            done
-            local IFS=$oIFS
-        fi
+    _dataset=${1}
+    _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _jid=$(jls -j ioc-${_uuid} jid)
+    _ip4=$(__get_dataset_ioc_prop ip4_addr ${_dataset})
+    _ip6=$(__get_dataset_ioc_prop ip6_addr ${_dataset})
+    _defaultgw=$(__get_dataset_ioc_prop defaultrouter ${_dataset})
+    _defaultgw6=$(__get_dataset_ioc_prop defaultrouter6 ${_dataset})
+    _nics=$(__get_dataset_ioc_prop interfaces ${_dataset} | tr ',' ' ')
+    _mac_offset=0
+    
+    for _i in ${_nics} ; do
+        _nic=${_i%%:*}
+        _bridge=${_i#*:}
+        _memberif=$(ifconfig ${_bridge} | awk '/member/ { print $2; exit }')
+        _brmtu=$(ifconfig ${_memberif} | awk '{ print $6; exit }')
+        _epair_a=$(ifconfig epair create)
+        _epair_b="${_epair_a%a}b"
+        ifconfig ${_epair_a} name ${_nic}:${_jid} mtu ${_brmtu}
+        _mac_epair_a=$(__validate_mac ${_nic} ${_mac_offset} a ${_dataset})
+        ifconfig ${_nic}:${_jid} link ${_mac_epair_a}
+        ifconfig ${_nic}:${_jid} description "associated with jail: ${_uuid}"
+        ifconfig ${_epair_b} vnet ioc-${_uuid}
+        jexec ioc-${_uuid} ifconfig ${_epair_b} name ${_nic} mtu ${_brmtu}
+        _mac_epair_b=$(__validate_mac ${_nic} ${_mac_offset} b ${_dataset})
+        jexec ioc-${_uuid} ifconfig ${_nic} link ${_mac_epair_b}
+        ifconfig ${_bridge} addm ${_nic}:${_jid} up
+        ifconfig ${_nic}:${_jid} up
+        : $((_mac_offset += 2))
+    done
 
-        if [ "$ip6" != "none" ] ; then
-            for i in $ip6_list ; do
-                iface="$(echo $i |awk 'BEGIN { FS = "|" } ; { print $1 }')"
-                ip="$(echo $i |awk 'BEGIN { FS = "|" } ; { print $2 }')"
-                jexec ioc-${2} ifconfig $iface inet6 $ip up
-            done
-        fi
+    if [ "${_ip4}" != "none" ] ; then
+        IFS=','
+        _addrs=$(echo ${_ip4})
+        unset IFS
 
-        if [ "$defaultgw" != "none" ] ; then
-            jexec ioc-${2} route add default $defaultgw > /dev/null
-        fi
-
-        if [ "$defaultgw6" != "none" ] ; then
-            jexec ioc-${2} route add -6 default "${defaultgw6}" >/dev/null
-        fi
-
-    elif [ ${_action} == "stop" ] ; then
-        for if in $nics ; do
-            local nic="$(echo $if | cut -f 1 -d:)"
-            ifconfig ${nic}:${_jid} destroy
+        for _i in ${_addrs} ; do
+            _iface=${_i%%|*}
+            _ip=${_i#*|}
+            jexec ioc-${_uuid} ifconfig ${_iface} ${_ip} up
         done
     fi
+
+    if [ "${_ip6}" != "none" ] ; then
+        IFS=','
+        _addrs=$(echo ${_ip6})
+        unset IFS
+
+        for _i in ${_addrs} ; do
+            _iface=${_i%%|*}
+            _ip=${_i#*|}
+            jexec ioc-${_uuid} ifconfig ${_iface} inet6 ${_ip} up
+        done
+    fi
+
+    if [ "${_defaultgw}" != "none" ] ; then
+        jexec ioc-${_uuid} route add default ${_defaultgw} > /dev/null
+    fi
+
+    if [ "${_defaultgw6}" != "none" ] ; then
+        jexec ioc-${_uuid} route add -6 default ${_defaultgw6} >/dev/null
+    fi
+}
+
+__stop_networking () {
+    local _dataset _uuid _jid _nics _i _nic
+
+    _dataset=${1}
+    _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _jid=$(jls -j ioc-${_uuid} jid)
+    _nics=$(__get_dataset_ioc_prop interfaces ${_dataset} | tr ',' ' ')
+
+    for _i in ${_nics} ; do
+        _nic=${_i%%:*}
+        ifconfig ${_nic}:${_jid} destroy
+    done
 }
 
 __stop_legacy_networking () {
-    local name="$1"
+    local _dataset _ip4_addr _ip6_addr _addrs _ip _iface _ip4 _ip6
+    
+    _dataset=${1}
 
-    local ip4_addr="$(__get_jail_prop ip4_addr $name)"
-    local ip6_addr="$(__get_jail_prop ip6_addr $name)"
+    _ip4_addr=$(__get_dataset_ioc_prop ip4_addr ${_dataset})
+    _ip6_addr=$(__get_dataset_ioc_prop ip6_addr ${_dataset})
 
-    if [ $ip4_addr != "none" ] ; then
-        local IFS=','
-        for ip in $ip4_addr ; do
-            local iface="$(echo $ip | \
-                         awk 'BEGIN { FS = "|" } ; { print $1 }')"
-            local ip4="$(echo $ip | \
-                       awk 'BEGIN { FS = "|" } ; { print $2 }' | \
-                       awk 'BEGIN { FS = "/" } ; { print $1 }')"
+    if [ "${_ip4_addr}" != "none" ] ; then
+        IFS=','
+        _addrs=$(echo ${_ip4_addr})
+        unset IFS
 
-            ifconfig $iface $ip4 -alias
+        for _ip in ${_addrs} ; do
+            _iface=${_ip%%|*}
+            _ip4=${_ip#*|}
+            ifconfig ${_iface} ${_ip4%%/*} -alias
         done
     fi
 
-    if [ $ip6_addr != "none" ] ; then
-        local IFS=','
-        for ip6 in $ip6_addr ; do
-            local iface="$(echo $ip6 | \
-                         awk 'BEGIN { FS = "|" } ; { print $1 }')"
-            local ip6="$(echo $ip6 | \
-                       awk 'BEGIN { FS = "|" } ; { print $2 }' | \
-                       awk 'BEGIN { FS = "/" } ; { print $1 }')"
-            ifconfig $iface inet6 $ip6 -alias
+    if [ "${_ip6_addr}" != "none" ] ; then
+        IFS=','
+        _addrs=$(echo ${_ip6_addr})
+        unset IFS
+
+        for _ip in ${_addrs} ; do
+            _iface=${_ip%%|*}
+            _ip6=${_ip#*|}
+            ifconfig ${_iface} inet6 ${_ip6%%/*} -alias
         done
     fi
 }
-

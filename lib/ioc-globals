@@ -19,14 +19,14 @@ fi
 ipv6="on"
 
 interfaces="vnet0:bridge0,vnet1:bridge1"
-host_hostname=$uuid
+host_hostname=${uuid}
 exec_fib=0
-hostname=$uuid
+hostname=${uuid}
 ip4_addr="none"
-ip4_saddrsel="1"
+ip4_saddrsel=1
 ip4="new"
 ip6_addr="none"
-ip6_saddrsel="1"
+ip6_saddrsel=1
 ip6="new"
 defaultrouter="none"
 defaultrouter6="none"
@@ -38,7 +38,7 @@ vnet2_mac="none"
 vnet3_mac="none"
 
 # Standard jail properties
-devfs_ruleset="4"
+devfs_ruleset=4
 exec_start="/bin/sh /etc/rc"
 exec_stop="/bin/sh /etc/rc.shutdown"
 exec_prestart="/usr/bin/true"
@@ -48,16 +48,16 @@ exec_poststop="/usr/bin/true"
 exec_clean=1
 exec_timeout=60
 stop_timeout=30
-exec_jail_user=root
+exec_jail_user="root"
 exec_system_jail_user=0
-exec_system_user=root
+exec_system_user="root"
 mount_devfs=1
 mount_fdescfs=1
-enforce_statfs="2"
-children_max="0"
-login_flags='-f root'
-securelevel="2"
-host_hostuuid=$uuid
+enforce_statfs=2
+children_max=0
+login_flags="-f root"
+securelevel=2
+host_hostuuid=${uuid}
 allow_set_hostname=0
 allow_sysvipc=0
 allow_raw_sockets=0
@@ -102,15 +102,15 @@ template="no"
 boot="off"
 notes="none"
 owner="root"
-priority="99"
+priority=99
 last_started="none"
 type="jail"
 release=$(uname -r|cut -f 1,2 -d'-')
 hostid=$(cat /etc/hostid)
 jail_zfs="off"
 jail_zfs_dataset="iocage/jails/${uuid}/root/data"
-mount_procfs="0"
-hack88="0"
+mount_procfs=0
+hack88=0
 
 # Native ZFS properties
 compression="lz4"
@@ -131,6 +131,10 @@ sync_tgt_zpool="none"
 # FTP variables
 ftphost="ftp.freebsd.org"
 ftpfiles="base.txz doc.txz lib32.txz src.txz"
+
+# Supported releases
+supported_releases="10.1-RELEASE
+                     9.3-RELEASE"
 
 # Resource limits
 CONF_RCTL="memoryuse

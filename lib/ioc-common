@@ -2,10 +2,12 @@
 
 # Export every property specified on command line ----------------------
 __export_props () {
-    for i in "$@" ; do
-        if [ "$(echo $i | grep -e ".*=.*")" ] ; then
-            export "$i"
-            export "iocset_${i}"
+    local _i
+    
+    for _i in "${@}" ; do
+        if [ "$(echo ${_i} | grep -e ".*=.*")" ] ; then
+            export "${_i}"
+            export "iocset_${_i}"
         fi
     done
 }
@@ -15,10 +17,37 @@ __export_props () {
 # General note: if a function is called in a subshell, exiting only
 # exits the subshell, not the whole script!
 #
-# $1: error message to display before exiting
+# ${1}: error message to display before exiting
 __fatal_error () {
-    echo "  ERROR: $1" 1>&2
+    echo "  ERROR: ${1}" 1>&2
     exit 1
+}
+
+# Print the number of parameters passed to this function ---------------
+__wc () {
+    echo ${#}
+}
+
+# Require that a given value is a single word --------------------------
+#
+# If the given string value is a single word, nothing happens.
+# Otherwise, the error is considered fatal. An error description is
+# displayed, and the shell exits with a nonzero exit status.
+#
+# Note: To properly use this function, the first parameter must be
+# quoted when passed. For example: `__require_single_word "${_name}"`
+#
+# ${1}: the value to test
+# ${2}: optional description of the error if the check fails
+#       the default description is "Invalid value"
+__require_single_word () {
+    local _value _description
+
+    _value=${1}
+    _description=${2:-"Invalid value"}
+    _words=$(__wc ${_value})
+    
+    [ "${_words}" -eq 1 ] || __fatal_error "${_description}"
 }
 
 # Require that a given value is not empty ------------------------------
@@ -27,16 +56,16 @@ __fatal_error () {
 # Otherwise, the error is considered fatal. An error description is
 # displayed, and the shell exits with a nonzero exit status.
 #
-# $1: the value to test
-# $2: optional description of the error if the check fails
-#     the default description is "Missing value"
+# ${1}: the value to test
+# ${2}: optional description of the error if the check fails
+#       the default description is "Missing value"
 __require_not_empty () {
     local _value _description
 
-    _value=$1
-    _description="${2:-Missing value}"
+    _value=${1}
+    _description=${2:-"Missing value"}
 
-    [ -n "$_value" ] || __fatal_error "$_description"
+    [ -n "${_value}" ] || __fatal_error "${_description}"
 }
 
 # Require that the given name is not empty -----------------------------
@@ -47,14 +76,66 @@ __require_not_empty () {
 # This function is a specialization of the function __require_not_empty
 # for the common pattern of testing for a missing UUID or tag.
 #
-# $1: the UUID or tag, usually "$_name" by convention
+# ${1}: the UUID or tag, usually "${_name}" by convention
 __require_name_not_empty () {
     local _name _description
 
-    _name=$1
+    _name=${1}
     _description="Missing UUID or tag!"
 
-    __require_not_empty "$_name" "$_description"
+    __require_not_empty "${_name}" "${_description}"
+}
+
+# Require that the given name is not "ANY" -----------------------------
+#
+# If the name string is "ANY", a fatal error occurs, printing a message
+# to stderr and exiting the current shell. Otherwise, nothing happens.
+#
+# This function is for the common pattern of rejecting "ALL" when used
+# as a jail name for functions that do not support the "ALL" pattern.
+#
+# ${1}: the UUID or tag, usually "${_name}" by convention
+__require_name_not_all () {
+    local _name _description
+
+    _name=${1}
+    _description="ALL is not supported by this command!"
+
+    [ "${_name}" != "ALL" ] || __fatal_error "${_description}"
+}
+
+# Require that the given name is not more than a single word -----------
+#
+# If the name is multiple words, a fatal error occurs, printing a
+# message to stderr and exiting the current shell. Otherwise, nothing
+# happens.
+#
+# ${1}: the UUID or tag, usually "${_name}" by convention
+__require_name_single_word () {
+    local _name _description
+
+    _name=${1}
+    _description="Invalid jail name: ${_name}"
+
+    __require_single_word "${_name}" "${_description}"
+}
+
+# Require that the given dataset is not more than a single word --------
+#
+# If the dataset is multiple words, a fatal error occurs, printing a
+# message to stderr and exiting the current shell. Otherwise, nothing
+# happens.
+#
+# ${1}: the dataset to check
+# ${2}: (optional) the UUID or tag corresponding to the dataset
+__require_dataset_single_word () {
+    local _dataset _name _description
+
+    _dataset=${1}
+    _name=${2:-"jail"}
+    _description="Invalid dataset: ${_dataset} for ${_name}"
+
+    __require_single_word "${_dataset}" "${_description}"
 }
 
 # Require that the given dataset is not empty --------------------------
@@ -67,18 +148,18 @@ __require_name_not_empty () {
 # for the common pattern of testing for a UUID or tag that did not match
 # any jails.
 #
-# $1: the dataset, usually "$_dataset" by convention
-# $2: (optional) the UUID or tag that was used to look up the dataset,
-#     usually "$_name" by convention
-#     if omitted, "Dataset" takes its place in the error description
+# ${1}: the dataset, usually "${_dataset}" by convention
+# ${2}: (optional) the UUID or tag that was used to look up the dataset,
+#       usually "${_name}" by convention
+#       if omitted, "Dataset" takes its place in the error description
 __require_dataset_not_empty () {
     local _dataset _name _description
 
-    _dataset=$1
-    _name=$2
+    _dataset=${1}
+    _name=${2}
     _description="${_name:-Dataset} not found."
 
-    __require_not_empty "$_dataset" "$_description"
+    __require_not_empty "${_dataset}" "${_description}"
 }
 
 # Require that the given dataset is not "multiple" ---------------------
@@ -90,319 +171,365 @@ __require_dataset_not_empty () {
 # This function is for the common pattern of testing for a UUID prefix
 # matching multiple full UUIDs.
 #
-# $1: the dataset, usually "$_dataset" by convention
+# ${1}: the dataset, usually "${_dataset}" by convention
+# ${2}: (optional) the corresponding UUID or tag
 __require_dataset_not_multiple () {
     local _dataset _description
 
-    _dataset=$1
-    _description="Multiple matching UUIDs."
+    _dataset=${1}
+    _name=${2:-"the given UUID or tag"}
+    _description="Multiple matching UUIDs for ${_name}"
 
-    [ "$_value" != "multiple" ] || __fatal_error "$_description"
+    [ "${_value}" != "multiple" ] || __fatal_error "${_description}"
+}
+
+# Check the validity of the given UUID or tag --------------------------
+#
+# ${1}: the UUID or tag to check
+__check_name () {
+    local _name
+
+    _name=${1}
+
+    __require_name_not_empty "${_name}"
+    __require_name_not_all "${_name}"
+    __require_name_single_word "${_name}"
+}
+
+# Check the validity of the given UUID or tag --------------------------
+#
+# ALL is OK.
+#
+# ${1}: the UUID or tag to check
+__check_name_all () {
+    local _name
+
+    _name=${1}
+
+    __require_name_not_empty "${_name}"
+    __require_name_single_word "${_name}"
+}
+
+# Check the validity of the given dataset name -------------------------
+#
+# ${1}: the dataset to check
+# ${2}: (optional) the UUID or tag corresponding to the given dataset
+__check_dataset () {
+    local _name _dataset
+
+    _dataset=${1}
+    _name=${2:-"the given UUID or tag"}
+
+    __require_dataset_not_empty "${_dataset}" "${_name}"
+    __require_dataset_not_multiple "${_dataset}" "${_name}"
+    __require_dataset_single_word "${_dataset}" "${_name}"
+}
+
+# Check the validity of the given dataset name -------------------------
+#
+# Multiple words OK.
+#
+# ${1}: the dataset to check
+# ${2}: (optional) the UUID or tag corresponding to the given dataset
+__check_dataset_all () {
+    local _name _dataset
+
+    _dataset=${1}
+    _name=${2:-"the given UUID or tag"}
+
+    __require_dataset_not_empty "${_dataset}" "${_name}"
+    __require_dataset_not_multiple "${_dataset}" "${_name}"
 }
 
 # Set properties -------------------------------------------------------
 __set_jail_prop () {
-    local _property _name _dataset _pname _pval _found _CONF
+    local _property _name _dataset _pname _pval _CONF _prop
 
-    _property=$1
-    __require_not_empty "$_property" "Missing property!"
+    _property=${1}
+    __require_not_empty "${_property}" "Missing property!"
 
-    _name=$2
-    __require_name_not_empty "$_name"
+    _name=${2}
+    __check_name "${_name}"
 
-    _dataset=$(__find_jail "$_name")
-    __require_dataset_not_empty "$_dataset" "$_name"
-    __require_dataset_not_multiple "$_dataset"
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    _pname=${_property%%=*}
+    __require_not_empty "${_pname}" "Set failed, incorrect property syntax!"
 
-    _pname="$(echo $_property|awk 'BEGIN { FS = "=" } ; { print $1 }')"
-    __require_not_empty "$_pname" "Set failed, incorrect property syntax!"
+    _pval=${_property#*=}
 
-    _pval="$(echo $_property|awk 'BEGIN { FS = "=" } ; { print $2 }')"
-    __require_not_empty "$_pval" "Set failed, incorrect property syntax!"
+    _CONF="${CONF_NET}
+           ${CONF_JAIL}
+           ${CONF_RCTL}
+           ${CONF_CUSTOM}
+           ${CONF_SYNC}
+           ${CONF_FTP}"
 
-    _found="0"
-
-    _CONF="$CONF_NET
-           $CONF_JAIL
-           $CONF_RCTL
-           $CONF_CUSTOM
-           $CONF_SYNC
-           $CONF_FTP"
-
-    for prop in $_CONF ; do
-        if [ "$prop" == "$_pname" ] ; then
-            _found=1
-            zfs set org.freebsd.iocage:${prop}="${_pval}" $_dataset
-            if [ "$_pname" == "tag" ] ; then
-                __unlink_tag $_dataset
-                __link_tag $_dataset
-            fi
+    for _prop in ${_CONF} ; do
+        if [ ${_prop} == ${_pname} ] ; then
+            __set_dataset_ioc_prop ${_prop}="${_pval}" ${_dataset}
+            return 0
         fi
     done
 
-    for prop in $CONF_ZFS ; do
-        if [ "$prop" == "$_pname" ] ; then
-            zfs set $prop="$_pval" $_dataset
-            _found=1
+    for _prop in ${CONF_ZFS} ; do
+        if [ ${_prop} == ${_pname} ] ; then
+            __set_dataset_zfs_prop ${_prop}="${_pval}" ${_dataset}
+            return 0
         fi
     done
 
-    if [ $_found -ne "1" ] ; then
-        echo "  ERROR: Unsupported property: $_pname!"
-        exit 1
+    __fatal_error "Unsupported property: ${_pname}!"
+}
+
+__set_dataset_zfs_prop () {
+    local _property _dataset
+
+    _property=${1}
+    _dataset=${2}
+
+    zfs set "${_property}" ${_dataset}
+}
+
+__set_dataset_ioc_prop () {
+    local _property _dataset _pname
+
+    _property=${1}
+    _dataset=${2}
+    _pname=${_property%%=*}
+
+    zfs set org.freebsd.iocage:"${_property}" ${_dataset}
+
+    if [ ${_pname} == "tag" ] ; then
+        __unlink_tag ${_dataset}
+        __link_tag ${_dataset}
     fi
 }
 
 __console () {
     local _name _dataset _fulluuid _login_flags _jexec _exec_fib
-    _name=$1
 
-    if [ -z $_name ] ; then
-        echo "  ERROR: Missing UUID!"
-        exit 1
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _login_flags=$(__get_dataset_ioc_prop login_flags ${_dataset})
+
+    _exec_fib=$(__get_dataset_ioc_prop exec_fib ${_dataset})
+    __require_not_empty "${_exec_fib}" "Missing value for exec_fib property!"
+    __require_single_word "${_exec_fib}" "Invalid value for exec_fib property: ${_exec_fib}"
+
+    if [ ${_exec_fib} -ne 0 ] ; then
+        _jexec="setfib ${_exec_fib} jexec"
+    else
+        _jexec="jexec"
     fi
 
-    _dataset=$(__find_jail $_name)
-
-    if [ -z $_dataset ] ; then
-        echo "  ERROR: $_name not found."
-        exit 1
-    fi
-
-    if [ $_dataset == "multiple" ] ; then
-        echo "  ERROR: Multiple matching UUIDs!"
-        exit 1
-    fi
-
-    _fulluuid="$(__check_name $_name)"
-
-    _login_flags=$(zfs get -H -o value org.freebsd.iocage:login_flags \
-                  $pool/iocage/jails/$_fulluuid)
-
-    _exec_fib=$(zfs get -H -o value org.freebsd.iocage:exec_fib \
-                  $pool/iocage/jails/$_fulluuid)
-
-    _jexec="jexec"
-    if [ $_exec_fib -ne "0" ] ; then
-        _jexec="setfib $_exec_fib jexec"
-    fi
-
-    $_jexec ioc-${_fulluuid} login $_login_flags
+    ${_jexec} ioc-${_fulluuid} login ${_login_flags}
 }
 
 __exec () {
-    local _jexecopts _name _dataset _fulluuid _jexec _exec_fib
+    local _jexecopts _opt _name _jails _jail _fulluuid _dataset
+    local _jexec _exec_fib
+
     _jexecopts=
 
     # check for -U or -u to pass to jexec
-    while getopts u:U: opt "$@"; do
-        case "$opt" in
-            [uU]) _jexecopts="$_jexecopts -$opt $OPTARG";;
-            ?)    echo "  ERROR: Invalid exec option: $opt"
-                  exit 1
-                  ;;
+    while getopts u:U: _opt "${@}"; do
+        case "${_opt}" in
+            [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}";;
+            ?)    __fatal_error "Invalid exec option: ${_opt}";;
         esac
     done
-    shift $(expr $OPTIND - 1)
+    shift $(expr ${OPTIND} - 1)
 
-    _name=$1
+    _name=${1}
+    __check_name_all "${_name}"
     shift
 
-    if [ -z $_name ] ; then
-        echo "  ERROR: Missing UUID!"
-        exit 1
-    elif [ $_name == ALL ]; then
-        local _jails _fulluuid
-        _jails="$(__find_jail ALL)"
+    if [ ${_name} == "ALL" ]; then
+        _jails=$(__find_jail ALL)
 
-        for jail in $_jails ; do
-            _fulluuid="$(zfs get -H -o value org.freebsd.iocage:host_hostuuid $jail)"
-            jexec $_jexecopts ioc-${_fulluuid} "$@"
+        for _jail in ${_jails} ; do
+            _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+            jexec ${_jexecopts} ioc-${_fulluuid} "${@}"
         done
 
         exit 0
     fi
 
-    _dataset=$(__find_jail $_name)
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
 
-    if [ -z $_dataset ] ; then
-        echo "  ERROR: $_name not found."
-        exit 1
+    _exec_fib=$(__get_dataset_ioc_prop exec_fib ${_dataset})
+    __require_not_empty "${_exec_fib}" "Missing value for exec_fib property!"
+    __require_single_word "${_exec_fib}" "Invalid value for exec_fib property: ${_exec_fib}"
+
+    if [ ${_exec_fib} -ne 0 ] ; then
+        _jexec="setfib ${_exec_fib} jexec"
+    else
+        _jexec="jexec"
     fi
 
-    if [ $_dataset == "multiple" ] ; then
-        echo "  ERROR: multiple matching UUIDs!"
-        exit 1
-    fi
-
-    _fulluuid="$(__check_name $_name)"
-
-    _exec_fib=$(zfs get -H -o value org.freebsd.iocage:exec_fib \
-                  $pool/iocage/jails/$_fulluuid)
-
-    _jexec="jexec"
-    if [ $_exec_fib -ne "0" ] ; then
-        _jexec="setfib $_exec_fib jexec"
-    fi
-
-    $_jexec $_jexecopts ioc-${_fulluuid} "$@"
+    ${_jexec} ${_jexecopts} ioc-${_fulluuid} "${@}"
 }
 
 __chroot () {
-    local _name _command
-    _name="$1"
-    _command="$2"
+    local _name _dataset _fulluuid _mountpoint _command
 
-    if [ -z $_name ] ; then
-        echo "  ERROR: Missing UUID!"
-        exit 1
-    fi
+    _name=${1}
+    __check_name "${_name}"
+    
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
 
-    _dataset=$(__find_jail $_name)
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
-    if [ -z $_dataset ] ; then
-        echo "  ERROR: $_name not found."
-        exit 1
-    fi
+    _command=${2}
 
-    if [ $_dataset == "multiple" ] ; then
-        echo "  ERROR: Multiple matching UUIDs!"
-        exit 1
-    fi
-
-    _fulluuid="$(__check_name $_name)"
-    _jailroot="$(zfs get -Ho value mountpoint $_dataset)"
-
-    chroot ${_jailroot}/root $_command
+    chroot "${_mountpoint}/root" ${_command}
 }
 
 # Fetch release and prepare base ZFS filesystems -----------------------
 __fetch_release () {
-    local _rel_exist _default_rel
-    _default_rel=$(uname -r|cut -f 1,2 -d'-')
+    local _default_rel _answer _match _rel _file
 
-    if [ -z "$iocset_release" ] ; then
+    _default_rel=$(uname -r | cut -f 1,2 -d'-')
+
+    if [ -z "${iocset_release}" ] ; then
 	__print_release
 
-	echo -n "Please select a release [$release]: "
-	read answer
+	echo -n "Please select a release [${release}]: "
+	read _answer
 
-	if [ -z "$answer" ] ; then
-		answer="$release"
+	if [ -z "${_answer}" ] ; then
+	    _answer="${release}"
 	else
-		release="$answer"
-		for rel in $(echo $supported) ; do
-			if [ "$answer" == "$rel" ] ; then
-				release="$rel"
-				match="1"
-				break
-			fi
-		done
-
-		if [ -z $match ] ; then
-			echo "Invalid release $release specified, exiting.."
-			exit 1
+            _match=0
+	    for _rel in ${supported_releases} ; do
+		if [ "${_answer}" == "${_rel}" ] ; then
+		    release="${_rel}"
+		    _match=1
+		    break
 		fi
+	    done
+
+	    [ ${_match} -eq 1 ] ||
+                __fatal_error "Invalid release specified: ${_answer}"
 	fi
     fi
 
-
-    _rel_exist=$(zfs list | grep -w ^${pool}${iocroot}/releases/${release})
-
-    if [ -z "$_rel_exist" ] ; then
+    zfs list | grep -wq ^${pool}${iocroot}/releases/${release}
+    if [ ${?} -ne 0 ] ; then
         zfs create -o compression=lz4 -p ${pool}${iocroot}/releases/${release}/root
         zfs create -o compression=lz4 -p ${pool}${iocroot}/download/${release}
     fi
 
-    if [ -z "$ftpdir" ] ; then
-	ftpdir="/pub/FreeBSD/releases/amd64/$release"
+    if [ -z "${ftpdir}" ] ; then
+	ftpdir="/pub/FreeBSD/releases/amd64/${release}"
     fi
 
     cd ${iocroot}/download/${release}
-    for file in $ftpfiles ; do
-        if [ ! -e "$file" ] ; then
-            fetch http://${ftphost}${ftpdir}/${file}
-            if [ $? -ne 0 ] ; then
-		echo "Failed fetching $file.."
-		exit 1
-            fi
+    for _file in ${ftpfiles} ; do
+        if [ ! -e "${_file}" ] ; then
+            fetch http://${ftphost}${ftpdir}/${_file}
+            [ ${?} -eq 0 ] ||
+                __faltal_error "Failed fetching ${_file}..."
         fi
     done
 
-    for file in $(echo $ftpfiles) ; do
-        if [ -e "$file" ] ; then
-            echo "Extracting: $file"
+    for _file in ${ftpfiles} ; do
+        if [ -e "${_file}" ] ; then
+            echo "Extracting: ${_file}"
             chflags -R noschg ${iocroot}/releases/${release}/root
-            tar -C ${iocroot}/releases/${release}/root -xf $file
+            tar -C ${iocroot}/releases/${release}/root -xf ${_file}
         fi
     done
 
-        echo "* Updating base jail.."
+        echo "* Updating release to latest patch..."
         sleep 2
 
-        env UNAME_r="$release" env PAGER="/bin/cat" \
+        env UNAME_r="${release}" env PAGER="/bin/cat" \
             /usr/sbin/freebsd-update \
-            -b $iocroot/releases/$release/root \
-            -d $iocroot/releases/$release/root/var/db/freebsd-update/ fetch
-        env UNAME_r="$release" env PAGER="/bin/cat" \
+            -b ${iocroot}/releases/${release}/root \
+            -d ${iocroot}/releases/${release}/root/var/db/freebsd-update/ fetch
+        env UNAME_r="${release}" env PAGER="/bin/cat" \
             /usr/sbin/freebsd-update \
-            -b $iocroot/releases/$release/root \
-            -d $iocroot/releases/$release/root/var/db/freebsd-update/ install
+            -b ${iocroot}/releases/${release}/root \
+            -d ${iocroot}/releases/${release}/root/var/db/freebsd-update/ install
 
-    if [ ! -d $iocroot/log ] ; then
-        mkdir $iocroot/log
+    if [ ! -d ${iocroot}/log ] ; then
+        mkdir ${iocroot}/log
     fi
 
-    __create_basejail $release
-    chflags -R noschg $iocroot/base/$release/root
-    tar --exclude \.zfs --exclude usr/sbin/chown -C $iocroot/releases/$release/root -cf - . | \
-    tar --exclude \.zfs --exclude usr/sbin/chown -C $iocroot/base/$release/root -xf -
+    __create_basejail ${release}
 
-    if [ ! -e "$iocroot/base/$release/root/usr/sbin/chown" ] ; then
-       cd $iocroot/base/$release/root/usr/sbin && ln -s ../bin/chgrp chown
+    echo -n "* Copying release files to base jail..."
+    chflags -R noschg ${iocroot}/base/${release}/root
+    tar --exclude \.zfs --exclude usr/sbin/chown -C ${iocroot}/releases/${release}/root -cf - . | \
+    tar --exclude \.zfs --exclude usr/sbin/chown -C ${iocroot}/base/${release}/root -xf -
+
+    if [ ! -e "${iocroot}/base/${release}/root/usr/sbin/chown" ] ; then
+       cd ${iocroot}/base/${release}/root/usr/sbin && ln -s ../bin/chgrp chown
     fi
 
-    etcupdate extract -D $iocroot/base/$release/root \
-    -s $iocroot/base/$release/root/usr/src
+    etcupdate extract -D ${iocroot}/base/${release}/root \
+              -s ${iocroot}/base/${release}/root/usr/src
+    
+    echo " DONE"
 }
 
 # reads tag property from given jail dataset
 # creates symlink from $iocroot/tags/<tag> to $iocroot/jails/<uuid>
 __link_tag () {
     local _dataset _mountpoint _tag _readlink_tag _readlink_mount _tag_date
-    _dataset=$1
 
-    if _mountpoint=$(zfs get -H -o value mountpoint $_dataset) ; then
-        if _tag=$(zfs get -H -o value org.freebsd.iocage:tag $_dataset); then
-            _readlink_mount="$(readlink $iocroot/tags/$_tag)"
-            _readlink_tag="$(readlink $iocroot/tags/$_tag | cut -d \/ -f 4)"
-            _tag_date=$(date "+%F@%T")
-            mkdir -p $iocroot/tags
-            if [ ! -e $iocroot/tags/$_tag ] ; then
-                ln -s $_mountpoint $iocroot/tags/$_tag
-            elif [ -e $iocroot/tags/$_tag ] && [ "$_readlink_mount" != "$_mountpoint" ] ; then
-                echo " "
-                echo "  WARNING: Replacing tag $_tag!"
-                echo "  Renaming $_readlink_tag's tag to $_tag_date."
-                echo " "
-                # Link new tag to jail, and relink old jail to new tag.
-                __set_jail_prop "tag=$_tag_date" "$_readlink_tag"
-                ln -shf $_mountpoint $iocroot/tags/$_tag
-                ln -s $_readlink_mount $iocroot/tags/$_tag_date
-            fi
-        fi
-    else
-        echo "  ERROR: No such dataset: $_dataset!"
-        exit 1
+    _dataset=${1}
+
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+    { [ "${_mountpoint}" != "none" ] && [ "${_mountpoint}" != "legacy" ] ; } ||
+        __fatal_error "Invalid mountpoint property for jail dataset!"
+
+    _tag=$(__get_dataset_ioc_prop tag ${_dataset})
+    __require_not_empty "${_tag}" "Missing tag property for jail dataset!"
+    [ "${_tag}" != "-" ] ||
+        __fatal_error "Missing tag property for jail dataset!"
+    __require_single_word "${_tag}" "Invalid tag!"
+    
+    _readlink_mount=$(readlink ${iocroot}/tags/${_tag})
+    _readlink_tag=${_readlink_mount##*/}
+    _tag_date=$(date "+%F@%T")
+    mkdir -p ${iocroot}/tags
+    if [ ! -e ${iocroot}/tags/${_tag} ] ; then
+        ln -s "${_mountpoint}" ${iocroot}/tags/${_tag}
+    elif [ "${_readlink_mount}" != "${_mountpoint}" ] ; then
+        echo " "
+        echo "  WARNING: Replacing tag ${_tag}!"
+        echo "  Renaming ${_readlink_tag}'s tag to ${_tag_date}."
+        echo " "
+        # Link new tag to jail, and relink old jail to new tag.
+        __set_jail_prop tag=${_tag_date} ${_readlink_tag}
+        ln -shf "${_mountpoint}" ${iocroot}/tags/${_tag}
+        ln -s "${_readlink_mount}" ${iocroot}/tags/${_tag_date}
     fi
 }
 
 # removes all symlinks found in $iocroot/tags pointing to the given jail dataset
 __unlink_tag () {
     local _dataset _mountpoint
-    _dataset=$1
 
-    if _mountpoint=$(zfs get -H -o value mountpoint $_dataset) ; then
-        find $iocroot/tags -type l -lname "${_mountpoint}*" -exec rm -f \{\} \;
-    fi
+    _dataset=${1}
+
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+    { [ "${_mountpoint}" != "none" ] && [ "${_mountpoint}" != "legacy" ] ; } ||
+        __fatal_error "Invalid mountpoint property for jail dataset!"
+
+    find ${iocroot}/tags -type l -lname "${_mountpoint}*" -exec rm -f \{\} \;
 }

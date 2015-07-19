@@ -2,100 +2,98 @@
 
 # Configure properties -------------------------------------------------
 __configure_jail () {
-    local _value _default_value _CONF
+    local _CONF _prop _prop_name _value _default_value
 
-    _CONF="$CONF_NET
-           $CONF_JAIL
-           $CONF_RCTL
-           $CONF_CUSTOM
-           $CONF_SYNC"
+    _CONF="${CONF_NET}
+           ${CONF_JAIL}
+           ${CONF_RCTL}
+           ${CONF_CUSTOM}
+           ${CONF_SYNC}"
 
     #echo "Configuring jail.."
-    for prop in $_CONF ; do
-        prop_name=$prop
-        eval prop="\$${prop}"
-        if [ ! -z "$prop" ] ; then
+    for _prop_name in ${_CONF} ; do
+        eval _prop="\$${_prop_name}"
+        if [ -n "${_prop}" ] ; then
             # find saved default value if any for the property
-            _default_value="$(__get_default_prop $prop_name)"
+            _default_value=$(__get_default_prop ${_prop_name})
 
-            if [ "$_default_value" != "none" ] && [ "$_default_value" != "$prop" ] ; then
-                _value="$_default_value"
-            elif [ "$prop_name" = "tag" ] ; then
-                _value="$tag"
-            elif [ "$prop_name" = "host_hostname" ] ; then
-                _value="$uuid"
-            elif [ "$prop_name" = "hostname" ] ; then
-                _value="$uuid"
-            elif [ "$prop_name" = "host_hostuuid" ] ; then
-                _value="$uuid"
-            elif [ "$prop_name" = "jail_zfs_dataset" ] ; then
-                _value="${jail_zfs_dataset}"
-            elif [ "$prop_name" = "release" ] ; then
-                _value="${release}"
-            elif [ "$prop_name" = "hack88" ] ; then
-                _value="${hack88}"
-            elif [ "$prop_name" = "vnet0_mac" ] ; then
-                case "$vnet0_mac" in
+            if [ "${_default_value}" != "none" ] &&
+               [ "${_default_value}" != "${_prop}" ] ; then
+                _value=${_default_value}
+            elif [ ${_prop_name} == "tag" ] ; then
+                _value=${tag}
+            elif [ ${_prop_name} == "host_hostname" ] ||
+                 [ ${_prop_name} == "hostname" ] ||
+                 [ ${_prop_name} == "host_hostuuid" ] ; then
+                _value=${uuid}
+            elif [ ${_prop_name} == "jail_zfs_dataset" ] ; then
+                _value=${jail_zfs_dataset}
+            elif [ ${_prop_name} = "release" ] ; then
+                _value=${release}
+            elif [ ${_prop_name} = "hack88" ] ; then
+                _value=${hack88}
+            elif [ ${_prop_name} = "vnet0_mac" ] ; then
+                case "${vnet0_mac}" in
                     "-")
                         vnet0_mac="none"
                     ;;
                 esac
-                _value="$vnet0_mac"
-            elif [ "$prop_name" = "vnet1_mac" ] ; then
-                case "$vnet1_mac" in
+                _value=${vnet0_mac}
+            elif [ ${_prop_name} = "vnet1_mac" ] ; then
+                case "${vnet1_mac}" in
                     "-")
                         vnet1_mac="none"
                     ;;
                 esac
-                _value="$vnet1_mac"
-            elif [ "$prop_name" = "vnet2_mac" ] ; then
-                case "$vnet2_mac" in
+                _value=${vnet1_mac}
+            elif [ ${_prop_name} = "vnet2_mac" ] ; then
+                case "${_vnet2_mac}" in
                     "-")
                         vnet2_mac="none"
                     ;;
                 esac
-                _value="$vnet2_mac"
-            elif [ "$prop_name" = "vnet3_mac" ] ; then
-                case "$vnet3_mac" in
+                _value=${vnet2_mac}
+            elif [ ${_prop_name} = "vnet3_mac" ] ; then
+                case "${vnet3_mac}" in
                     "-")
                         vnet3_mac="none"
                     ;;
                 esac
-                _value="$vnet3_mac"
+                _value=${vnet3_mac}
             else
-                _value="$prop"
+                _value=${_prop}
             fi
 
-            if [ "$1" != "generate" ] ; then
-                echo "** $prop_name=$_value"
-                zfs set org.freebsd.iocage:$prop_name="$_value" $1
+            if [ "${1}" != "generate" ] ; then
+                echo "** ${_prop_name}=${_value}"
+                __set_dataset_ioc_prop ${_prop_name}="${_value}" ${1}
                 unset _value
-                if [ "$prop_name" == "tag" ] ; then
-                    __link_tag $1
+                if [ ${_prop_name} == "tag" ] ; then
+                    __link_tag ${1}
                 fi
-            elif [ "$1" == "generate" ] ; then
-                echo -n "-o org.freebsd.iocage:$prop_name=\"$_value\" "
+            elif [ "${1}" == "generate" ] ; then
+                echo -n "-o org.freebsd.iocage:${_prop_name}=\"${_value}\" "
             fi
         fi
     done
 
-    for prop in $CONF_ZFS ; do
-        prop_name=$prop
-        eval prop="\$${prop}"
-        _default_value="$(__get_default_prop $prop_name)"
-        if [ ! -z "$prop" ] && [ "$prop" != "readonly" ] ; then
+    for _prop_name in ${CONF_ZFS} ; do
+        eval _prop="\$${_prop_name}"
+        _default_value=$(__get_default_prop ${_prop_name})
+        if [ -n "${_prop}" ] && [ "${_prop}" != "readonly" ] ; then
             # find saved default value if any for the property
-            if [ "$_default_value" != "none" ] && [ "$_default_value" != "$prop" ] ; then
-                _value="$_default_value"
+            if [ "${_default_value}" != "none" ] &&
+               [ "${_default_value}" != "${_prop}" ] ; then
+                _value=${_default_value}
             else
-                _value="$prop"
+                _value=${_prop}
             fi
 
-            if [ "$1" != "generate" ] ; then
-                echo "** $prop_name=$_value"
-                zfs set $prop_name="$_value" $1
-            elif [ "$1" == "generate" ] ; then
-                echo -n "-o $prop_name=\"$_value\" "
+            if [ "${1}" != "generate" ] ; then
+                echo "** ${_prop_name}=${_value}"
+                __set_dataset_zfs_prop ${_prop_name}="${_value}" ${1}
+            elif [ "${1}" == "generate" ] ; then
+                echo -n "-o ${_prop_name}=\"${_value}\" "
             fi
         fi
     done
@@ -104,7 +102,7 @@ __configure_jail () {
 __jail_rc_conf () {
 cat << EOT
 
-cron_flags="$cron_flags -J 15"
+cron_flags="${cron_flags} -J 15"
 
 # Disable Sendmail by default
 sendmail_enable="NONE"
@@ -124,9 +122,10 @@ EOT
 # expects fulluuid to be passed in as $1
 __resolv_conf () {
     local _name _resolver _resolver_default _fulluuid
-    _fulluuid="$1"
-    _default_resolver="$(__get_default_prop resolver)"
-    _resolver="$(__get_jail_prop resolver $_fulluuid)"
+
+    _fulluuid=${1}
+    _default_resolver=$(__get_default_prop "resolver")
+    _resolver=$(__get_jail_prop resolver "${_fulluuid}")
 
     if [ "${_resolver}" != "none" ] ; then
         echo "${_resolver}" | tr \; \\n
@@ -138,44 +137,31 @@ __resolv_conf () {
 }
 
 __pkg_install () {
-    local _chrootdir="$1"
+    local _chrootdir _pkg
 
-    if [ -e $pkglist ] ; then
+    _chrootdir=${1}
+
+    if [ -e "${pkglist}" ] ; then
         echo "* Installing extra packages.."
-        for i in $(cat $pkglist) ; do
-            pkg -c $_chrootdir install -qy $i
+        for _pkg in $(cat "${pkglist}") ; do
+            pkg -c "${_chrootdir}" install -qy "${_pkg}"
         done
     fi
 }
 
 __reset_jail_props () {
-    local _name _dataset uuid tag
-    _name=$1
+    local _name _dataset _answer
 
-    if [ -z "$_name" ] ; then
-        echo "  ERROR: Missing UUID!"
-        exit 1
-    fi
+    _name=${1}
+    __check_name_all "${_name}"
 
-    _dataset="$(__find_jail $_name)"
-
-    if [ -z "$_dataset" ] ; then
-        echo "  ERROR: $_name not found."
-        exit 1
-    fi
-
-    if [ "$_dataset" == "multiple" ] ; then
-        echo "  ERROR: Multiple matching UUIDs!"
-        exit 1
-    fi
-
-    if [ $_name == "ALL" ] ; then
+    if [ ${_name} == "ALL" ] ; then
         echo " "
         echo "  WARNING: This will reset ALL jails!"
         echo " "
         echo -n "  Are you sure? Y[n]: "
-        read answer
-        if [ "$answer" == "Y" ] || [ "$answer" == "y" ] ; then
+        read _answer
+        if [ "${_answer}" == "Y" ] || [ "${_answer}" == "y" ] ; then
             echo "  Resetting all jails."
 
             __reset_jail_props_all
@@ -187,26 +173,31 @@ __reset_jail_props () {
         fi
     fi
     
-    # Cache properties to set again later
-    uuid="$(zfs get -H -o value org.freebsd.iocage:host_hostuuid $_dataset)"
-    tag="$iocset_tag"
-    vnet0_mac="$iocset_vnet0_mac"
-    vnet1_mac="$iocset_vnet1_mac"
-    vnet2_mac="$iocset_vnet2_mac"
-    vnet3_mac="$iocset_vnet3_mac"
-    release="$iocset_release"
-    hack88="$iocset_hack88"
-    jail_zfs_dataset="$iocset_jail_zfs_dataset"
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
 
-    __configure_jail $_dataset
+    # Cache properties to set again later
+    # (globals...)
+    uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    tag=${iocset_tag}
+    vnet0_mac=${iocset_vnet0_mac}
+    vnet1_mac=${iocset_vnet1_mac}
+    vnet2_mac=${iocset_vnet2_mac}
+    vnet3_mac=${iocset_vnet3_mac}
+    release=${iocset_release}
+    hack88=${iocset_hack88}
+    jail_zfs_dataset=${iocset_jail_zfs_dataset}
+
+    __configure_jail ${_dataset}
 }
 
 __reset_jail_props_all () {
-    local _jails _dataset
-    _jails="$(__find_jail ALL)"
+    local _jails _jail _name
 
-    for jail in $_jails ; do
-       _dataset="$(zfs get -H -o value org.freebsd.iocage:host_hostuuid $jail)"
-       __reset_jail_props "$_dataset"
+    _jails=$(__find_jail ALL)
+
+    for _jail in ${_jails} ; do
+        _name=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+       __reset_jail_props ${_name}
     done
 }

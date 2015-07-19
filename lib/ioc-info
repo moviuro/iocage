@@ -2,33 +2,31 @@
 
 # Print supported releases----------------------------------
 __print_release () {
-    supported="10.1-RELEASE
-                9.3-RELEASE"
-
+    local _rel
+    
     echo "Supported releases are: "
-    for rel in $(echo $supported) ; do
-        printf "%15s\n" "$rel"
+    for _rel in ${supported_releases} ; do
+        printf "%15s\n" "${_rel}"
     done
 }
 
 # Print defaults set in this script.
 __print_defaults () {
-    local _prop _prop_name _saved_default
+    local _CONF _prop _prop_name _saved_default
 
-    _CONF="$CONF_NET
-           $CONF_JAIL
-           $CONF_RCTL
-           $CONF_CUSTOM
-           $CONF_ZFS
-           $CONF_SYNC
-           $CONF_FTP"
+    _CONF="${CONF_NET}
+           ${CONF_JAIL}
+           ${CONF_RCTL}
+           ${CONF_CUSTOM}
+           ${CONF_ZFS}
+           ${CONF_SYNC}
+           ${CONF_FTP}"
 
-    for _prop in $(echo $_CONF)  ; do
-        _prop_name=$_prop
-        eval _prop="\$${_prop}"
+    for _prop_name in ${_CONF} ; do
+        eval _prop="\$${_prop_name}"
 
         if [ ! -z "${_prop}" ] ; then
-            _saved_default="$(__get_jail_prop ${_prop_name} default)"
+            _saved_default=$(__get_jail_prop ${_prop_name} default)
             if [ "${_saved_default}" != "none" ] ; then
                 echo "${_prop_name}=${_saved_default}"
             else
@@ -42,354 +40,330 @@ __print_defaults () {
 __get_default_prop () {
     local _property _value
 
-    _property="$1"
-    _value="$(__get_jail_prop $_property default)"
+    _property=${1} # checked in __get_jail_prop
+    _value=$(__get_jail_prop "${_property}" default)
 
-    if [ "$_value" != '-' ] ; then
-        echo "$_value"
+    if [ "${_value}" != '-' ] ; then
+        echo "${_value}"
     else
         echo "none"
     fi
 }
 
 # Find and return the jail's top level ZFS dataset
-
+# Note: parameters are trusted to be valid
 __find_jail () {
-    local name=$1
-    local jlist="/tmp/iocage-jail-list.$$"
-    local jails="$(zfs list -rH -o name $pool/iocage/jails \
-                 | grep -E \
-                "^$pool/iocage/jails/[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}$")"
+    local _name _jlist _jails _jail _found _tag _count
 
-    if [ "${name}" == "ALL" ] ; then
-        for jail in $jails ; do
-            echo $jail
-        done
-    elif [ "${name}" == "default" ] ; then
+    _name=${1}
+
+    if [ ${_name} == "default" ] ; then
         echo "${pool}/iocage/.defaults"
-    else
-        for jail in $jails ; do
-            found="$(echo $jail |grep -iE "^$pool/iocage/jails/$name"|wc -l)"
-            local tag="$(zfs get -H -o value org.freebsd.iocage:tag $jail)"
+        exit 0
+    fi
+    
+    _jails=$(zfs list -rHo name ${pool}/iocage/jails \
+             | grep -E "^${pool}/iocage/jails/[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}$")
 
-            if [ "$found" -eq 1 ] ; then
-                echo $jail >> $jlist
-            fi
-
-            if [ $tag == $name ] ; then
-                echo $jail >> $jlist
-            fi
+    if [ ${_name} == "ALL" ] ; then
+        for _jail in ${_jails} ; do
+            echo ${_jail}
         done
-
-        if [ ! -e $jlist ] ; then
-            exit 0
+    fi
+    
+    _jlist="/tmp/iocage-jail-list.${$}"
+    _count=0
+    for _jail in ${_jails} ; do
+        _found=$(echo ${_jail} | grep -iEc "^${pool}/iocage/jails/${_name}")
+        
+        if [ ${_found} -gt 0 ] ; then
+            : $((_count += _found))
+            echo ${_jail} >> ${_jlist}
+            continue
         fi
 
-        if [ "$(cat $jlist|wc -l)" -eq "1" ] ; then
-            cat $jlist
-        elif [ "$(cat $jlist|wc -l)" -gt "1" ] ; then
-            echo "multiple"
+        _tag=$(__get_dataset_ioc_prop tag ${_jail})
+
+        if [ "${_tag}" == "${_name}" ] ; then
+            : $((_count += 1))
+            echo ${_jail} >> ${_jlist}
         fi
+    done
+
+    if [ ${_count} -eq 0 ] ; then
+        exit 0
+    elif [ ${_count} -eq 1 ] ; then
+        cat ${_jlist}
+    elif [ ${_count} -gt 1 ] ; then
+        echo "multiple"
     fi
 
-    rm  -f $jlist
+    rm -f ${_jlist}
 }
 
 __list_jails () {
-    local jails=$(__find_jail ALL)
-    local switch=$1
-    local all_jids=$(jls -N -h jid | grep -v -x jid )
-    local ioc_jids=""
-    local non_ioc_jids=""
+    local _jails _switch _all_jids _ioc_jids _state _non_ioc_jids _releases _rel _jail
+    local _uuid _boot _tag _mountpoint _template _jid _all_jail _ioc_jail
+    local _temp_loop_var _path _ip4 _host_hostname
+    
+    _jails=$(__find_jail ALL)
+    _switch=${1}
+    _all_jids=$(jls jid)
+    _ioc_jids=""
+    _non_ioc_jids=""
 
-    if [ ! -z ${switch} ] && [ $switch == "-r" ] ; then
+    if [ "${_switch}" == "-r" ] ; then
         echo "Downloaded releases:"
-        local releases="$(zfs list -o name -Hr $pool/iocage/releases \
-                        | grep RELEASE$ | cut -d \/ -f 4)"
-        for rel in $(echo $releases) ; do
-            printf "%15s\n" "$rel"
+        _releases=$(zfs list -o name -Hr ${pool}/iocage/releases \
+                    | awk -F/ '/RELEASE$/ { print $4 }')
+        for _rel in ${_releases} ; do
+            printf "%15s\n" "${_rel}"
         done
         exit 0
     fi
 
-    printf "%-4s  %-36s  %s  %s  %s\n" "JID" "UUID"  "BOOT"\
-           "STATE" "TAG"
-    for jail in $jails ; do
-        uuid=$(zfs get -H -o value org.freebsd.iocage:host_hostuuid $jail)
-        boot=$(zfs get -H -o value org.freebsd.iocage:boot $jail)
-        tag=$(zfs get -H -o value org.freebsd.iocage:tag $jail)
-        jail_path=$(zfs get -H -o value mountpoint $jail)
-        state=$(jls | grep ${jail_path} | awk '{print$1}')
-        state=$(jls | grep ${jail_path} | awk '{print$1}')
-        template=$(zfs get -H -o value org.freebsd.iocage:template $jail)
+    printf "%-4s  %-36s  %s  %s  %s\n" "JID" "UUID" "BOOT" "STATE" "TAG"
+    for _jail in ${_jails} ; do
+        _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+        _boot=$(__get_dataset_ioc_prop boot ${_jail})
+        _tag=$(__get_dataset_ioc_prop tag ${_jail})
+        _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_jail})
+        _template=$(__get_dataset_ioc_prop template ${_jail})
         # get jid for iocage jails
-        jid=$(jls -j "ioc-"$uuid  -h jid 2> /dev/null | grep -v -x "jid")
-        if [ -z "$jid"  ] ; then
-            jid="-"
+        _jid=$(jls -j "ioc-${_uuid}" jid 2> /dev/null)
+        if [ -z "${_jid}"  ] ; then
+            _jid="-"
         fi
-        local ioc_jids=$ioc_jids" "$jid
+        _ioc_jids="${_ioc_jids} ${_jid}"
 
-        if [ -z "$state" ] ; then
-            state=down
+        if __is_running ${_uuid} ; then
+            _state="up"
         else
-            state=up
+            _state="down"
         fi
 
-        if [ -z ${switch} ] ; then
-            switch=zero
+        if [ -z "${_switch}" ] ; then
+            _switch="zero"
         fi
 
-        if [ $switch == "-t" ] ; then
-            if [ $template == "yes" ] ; then
-                printf "%-4s  %-+.36s  %-3s   %-4s   %s\n" "$jid" "$uuid" \
-                "$boot" "$state" "$tag"
+        if [ "${_switch}" == "-t" ] ; then
+            if [ "${_template}" == "yes" ] ; then
+                printf "%-4s  %-+.36s  %-3s   %-4s   %s\n" \
+                       "${_jid}" "${_uuid}" "${_boot}" "${_state}" "${_tag}"
             fi
-        elif [ $switch != "-t" ] ; then
-            if [ $template != "yes" ] ; then
-                printf "%-4s  %-+.36s  %-4s  %-4s   %s\n" "$jid" "$uuid"  \
-                "$boot" "$state" "$tag"
+        else
+            if [ "${_template}" != "yes" ] ; then
+                printf "%-4s  %-+.36s  %-4s  %-4s   %s\n" \
+                       "${_jid}" "${_uuid}" "${_boot}" "${_state}" "${_tag}"
             fi
         fi
     done
 
     # create list of active jids not registered in iocage
-    for all_jail in $all_jids ; do
-        for ioc_jail in $ioc_jids ; do
-            if [ "$all_jail" == "$ioc_jail" ] ; then
-                local temp_loop_var=""
+    for _all_jail in ${_all_jids} ; do
+        for _ioc_jail in ${_ioc_jids} ; do
+            if [ ${_all_jail} == ${_ioc_jail} ] ; then
+                _temp_loop_var=""
                 break
             else
-                local temp_loop_var=$all_jail
-
+                _temp_loop_var=${_all_jail}
             fi
         done
-    if [ -n "$temp_loop_var" ] ; then
-        local non_ioc_jids=$non_ioc_jids" "$temp_loop_var
-    fi
+        if [ -n "${_temp_loop_var}" ] ; then
+            _non_ioc_jids="${_non_ioc_jids} ${_temp_loop_var}"
+        fi
     done
 
     # output non iocage jails currently active
-    if [ -n "$non_ioc_jids" ] ; then
-        if [ $switch != "-t" ] ; then
+    if [ -n "${_non_ioc_jids}" ] ; then
+        if [ "${_switch}" != "-t" ] ; then
             printf "%-+40s\n" "--- non iocage jails currently active ---"
-            printf "%-4s  %-36s  %-15s  %s \n" "JID" "PATH"\
-                  "IP4" "HOSTNAME"
-            for jid in $non_ioc_jids ; do
-                path=$(jls -j $jid  -h path | grep -v -x "path")
-                ip4=$(jls -j $jid  -h ip4.addr | grep -v -x "ip4.addr")
-                host_hostname=$(jls -j $jid  -h host.hostname | grep -v -x "host.hostname")
-                printf "%-4s  %-36.36s  %-15s  %s\n" "$jid" "$path"  \
-                        "$ip4" "$host_hostname"
+            printf "%-4s  %-36s  %-15s  %s \n" "JID" "PATH" "IP4" "HOSTNAME"
+            for _jid in ${_non_ioc_jids} ; do
+                _path=$(jls -j ${_jid} path)
+                _ip4=$(jls -j ${_jid} ip4.addr)
+                _host_hostname=$(jls -j ${_jid} host.hostname)
+                printf "%-4s  %-36.36s  %-15s  %s\n" \
+                       "${_jid}" "${_path}" "${_ip4}" "${_host_hostname}"
             done
         fi
     fi
 }
 
 __print_disk () {
-    local jails=$(__find_jail ALL)
+    local _jails _jail _uuid _crt _res _qta _use _ava
+    
+    _jails=$(__find_jail ALL)
 
-    printf "%-36s  %-6s  %-5s  %-5s  %-5s  %-5s\n" "UUID" "CRT" "RES" "QTA" "USE" "AVA"
+    printf "%-36s  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
+           "UUID" "CRT" "RES" "QTA" "USE" "AVA"
 
-    for jail in $jails ; do
-        uuid=$(zfs get -H -o value org.freebsd.iocage:host_hostuuid $jail)
-        crt=$(zfs get -H -o value compressratio $jail)
-        res=$(zfs get -H -o value reservation $jail)
-        qta=$(zfs get -H -o value quota $jail)
-        use=$(zfs get -H -o value used $jail)
-        ava=$(zfs get -H -o value available $jail)
+    for _jail in ${_jails} ; do
+        _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+        _crt=$(__get_dataset_zfs_prop compressratio ${_jail})
+        _res=$(__get_dataset_zfs_prop reservation ${_jail})
+        _qta=$(__get_dataset_zfs_prop quota ${_jail})
+        _use=$(__get_dataset_zfs_prop used ${_jail})
+        _ava=$(__get_dataset_zfs_prop available ${_jail})
 
-        printf "%-36s  %-6s  %-5s  %-5s  %-5s  %-5s\n" "$uuid" "$crt" "$res" "$qta" \
-               "$use" "$ava"
+        printf "%-36s  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
+               "${_uuid}" "${_crt}" "${_res}" "${_qta}" "${_use}" "${_ava}"
     done
 }
 
 __find_mypool () {
-    pools="$(zpool list -H -o name)"
-    found="0"
+    local _found _pools _pool _mypool
+    
+    _found=0
+    _pools=$(zpool list -Ho name)
 
-    for i in $pools ; do
-        mypool="$(zpool get comment $i | grep -v NAME | awk '{print $3}')"
+    for _pool in ${_pools} ; do
+        _mypool=$(zpool get -Ho value comment ${_pool})
 
-        if [ "$mypool" == "iocage" ] ; then
-            export pool=$i
-            found=1
+        if [ "${_mypool}" == "iocage" ] ; then
+            _found=1
             break
         fi
     done
 
-    if [ $found -ne 1 ] ; then
-        if [ -n "$RC_PID" ]; then
+    if [ ${_found} -ne 1 ] ; then
+        if [ -n "${RC_PID}" ] ; then
             # RC_PID set means we are running from rc
-            echo "ERROR: No pool for iocage jails found on boot ..exiting"
-            exit 1
-        else
-            echo "Setting up zpool [$i] for iocage usage..."
-            echo "If you wish to change zpool, use 'iocage activate'"
-            zpool set comment=iocage $i
-            export pool=$i
+            __fatal_error "No pool for iocage jails found on boot."
         fi
+
+        echo "Setting up zpool [${_pool}] for iocage usage..."
+        echo "If you wish to change zpool, use 'iocage activate'"
+        zpool set comment=iocage ${_pool}
     fi
+
+    export pool=${_pool}
 }
 
 # Get jail properties
 __get_jail_prop () {
-    local _value _found
-    local name="$2"
-    local property="$1"
-    _found="0"
+    local _found _property _name _dataset _CONF _prop _value
 
-    if [ -z "$property" ] ; then
-        echo "  ERROR: get failed, incorrect property syntax!"
-        exit 1
-    fi
+    _found=0
+    _property=${1}
+    __require_not_empty "${_property}" "Missing property!"
+    __require_single_word "${_property}" "Invalid property: ${_property}"
 
-    if [ -z "$name" ] ; then
-        echo "  ERROR: missing UUID!"
-        exit 1
-    fi
+    _name=${2}
+    __check_name "${_name}"
+    
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
 
-    local dataset="$(__find_jail $name)"
+    _CONF="${CONF_NET}
+           ${CONF_JAIL}
+           ${CONF_RCTL}
+           ${CONF_CUSTOM}
+           ${CONF_SYNC}
+           ${CONF_FTP}"
 
-    if [ -z "$dataset" ] ; then
-        echo "  ERROR: jail $name not found!"
-        exit 1
-    fi
-
-    if [ "$dataset" == "multiple" ] ; then
-        echo "  ERROR: multiple matching UUIDs!"
-        exit 1
-    fi
-
-
-    local CONF="$CONF_NET
-                $CONF_JAIL
-                $CONF_RCTL
-                $CONF_CUSTOM
-                $CONF_SYNC
-                $CONF_FTP"
-
-    for prop in $CONF ; do
-        if [ $prop == $property ] ; then
+    for _prop in ${_CONF} ; do
+        if [ ${_prop} == ${_property} ] ; then
             _found=1
-            _value="$(zfs get -H -o value org.freebsd.iocage:$prop \
-                         $dataset)"
+            _value=$(__get_dataset_ioc_prop ${_prop} ${_dataset})
             # Fix nonexistent property problem (zfs get returns "-")
             # info: https://github.com/iocage/iocage/issues/76
-            if [ "$_value" == '-' ] ; then
+            if [ "${_value}" == "-" ] ; then
                 echo "none"
             else
-                echo "$_value"
+                echo "${_value}"
             fi
+            break
 
-        elif [ $property == "all" ] ; then
+        elif [ ${_property} == "all" ] ; then
             _found=1
-            _value="$(zfs get -H -o value org.freebsd.iocage:$prop \
-                         $dataset)"
-            echo "$prop:$_value"
+            _value=$(__get_dataset_ioc_prop ${_prop} ${_dataset})
+            echo "${_prop}:${_value}"
+            break
         fi
     done
 
-    for prop in $CONF_ZFS ; do
-        if [ $prop == $property ] ; then
-            _found=1
-            _value="$(zfs get -H -o value $prop $dataset)"
-            echo "$_value"
-        fi
-    done
-
-    if [ $_found -ne "1" ] ; then
-        echo "  ERROR: unsupported property: $property !"
-        exit 1
+    if [ ${_found} -ne 1 ] ; then
+        for _prop in ${CONF_ZFS} ; do
+            if [ ${_prop} == ${_property} ] ; then
+                _found=1
+                _value=$(__get_dataset_zfs_prop ${_prop} ${_dataset})
+                echo "${_value}"
+                break
+            fi
+        done
     fi
+    
+    [ ${_found} -eq 1 ] ||
+        __fatal_error "Unsupported property: ${_property}"
+}
+
+__get_dataset_zfs_prop () {
+    local _prop _dataset
+
+    _prop=${1}
+    _dataset=${2}
+    
+    zfs get -Ho value ${_prop} ${_dataset}
+}
+
+__get_dataset_ioc_prop () {
+    local _prop _dataset
+
+    _prop=${1}
+    _dataset=${2}
+
+    zfs get -Ho value org.freebsd.iocage:${_prop} ${_dataset}
 }
 
 __runtime () {
-    local name=$1
+    local _name _dataset _fulluuid _params _param
 
-    if [ -z $name ] ; then
-        echo "  ERROR: missing UUID"
-        exit 1
-    fi
+    _name=${1}
+    __check_name "${_name}"
 
-    local dataset=$(__find_jail $name)
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
 
-    if [ -z $dataset ] ; then
-        echo "  ERROR: $name not found"
-        exit 1
-    fi
+    _params=$(jls -nj ioc-${_fulluuid})
+    __require_not_empty "${_params}" "Jail ${_fulluuid} is not up..."
 
-    if [ $dataset == "multiple" ] ; then
-        echo "  ERROR: multiple matching UUIDs!"
-        exit 1
-    fi
-
-    local fulluuid="$(__check_name $name)"
-
-    local state="$(jls -n -j ioc-${fulluuid} | wc -l)"
-
-    if [ "$state" -eq "1" ] ; then
-        local params="$(jls -nj ioc-${fulluuid})"
-        for i in $params ; do
-            echo "  $i"
-        done
-    else
-        echo " ERROR: jail $fulluuid is not up.."
-    fi
-}
-
-__get_jail_name () {
-    for i in $@; do
-        :;
+    for _param in ${_params} ; do
+        echo "  ${_param}"
     done
-
-    echo $i
 }
 
 # search for executable prestart|poststart|prestop|poststop in jail_dir first,
 # else use jail exec_<type> property unchanged
 __findscript () {
-    local name=$1
+    local _name _type _mountpoint
+    
+    _name=${1}
+    __check_name "${_name}"
+    
     # type should be one of prestart|poststart|prestop|poststop
-    local type=$2
-    local jail_path="$(__get_jail_prop mountpoint $name)"
+    _type=${2}
+    __require_not_empty "${_type}" "Missing type argument."
+    case "${_type}" in
+        prestart|poststart|prestop|poststop) ;;
+        *) __fatal_error "Unsupported script type: ${_type}" ;;
+    esac
+    
+    _mountpoint=$(__get_jail_prop mountpoint ${_name})
 
-    if [ -x "${jail_path}/${type}" ]; then
-        echo "${jail_path}/${type}"
+    if [ -x "${_mountpoint}/${_type}" ]; then
+        echo "${_mountpoint}/${_type}"
     else
-        echo "$(__get_jail_prop exec_${type} $name)"
+        echo $(__get_jail_prop exec_${_type} ${_name})
     fi
-}
-
-__check_name () {
-    local name=$1
-
-    if [ -z $name ] ; then
-        echo "ERROR"
-        exit 1
-    fi
-
-    local dataset=$(__find_jail $name)
-
-    if [ -z $dataset ] ; then
-        echo "  ERROR: jail $name not found!"
-        exit 1
-    fi
-
-    if [ $dataset == "multiple" ] ; then
-        echo "  ERROR: multiple matching UUIDs!"
-        exit 1
-    fi
-
-    local uuid="$(__get_jail_prop host_hostuuid $name)"
-
-    echo "$uuid"
-
 }
 
 __is_running () {
-    local _fulluuid _state
-    _fulluuid="$1"
-    _running="$(jls -n| grep ioc-${_fulluuid} | wc -l)"
+    local _fulluuid
+    
+    _fulluuid=${1}
 
-    echo "${_running}"
+    jls name | grep -q "ioc-${_fulluuid}"
 }

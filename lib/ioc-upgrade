@@ -1,135 +1,113 @@
 #!/bin/sh
 
 __update () {
-    local name=$1
+    local _name _dataset _jail_type _fulluuid _mountpoint _date _jail_release
+    
+    _name=${1}
+    __check_name "${_name}"
 
-    if [ -z $name ] ; then
-        echo "  ERROR: missing UUID"
-        exit 1
-    fi
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
 
-    local dataset=$(__find_jail $name)
+    _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
 
-    if [ -z $dataset ] ; then
-        echo "  ERROR: $name not found"
-        exit 1
-    fi
-
-    if [ $dataset == "multiple" ] ; then
-        echo "  ERROR: multiple matching UUIDs!"
-        exit 1
-    fi
-
-    local fulluuid="$(__check_name $name)"
-
-    local mountpoint="$(__get_jail_prop mountpoint $fulluuid)"
-    local date=$(date "+%F_%T")
-    local jail_type="$(__get_jail_prop type $fulluuid)"
-    local jail_release="$(__get_jail_prop release $fulluuid)"
-
-    if [ $jail_type == "basejail" ] ; then
+    if [ "${_jail_type}" == "basejail" ] ; then
         # Re-clone required filesystems
-        __reclone_basejail $name
+        __reclone_basejail ${_dataset}
     else
+        _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+        _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+        _date=$(date "+%F_%T")
+        _jail_release=$(__get_dataset_ioc_prop release ${_dataset})
+
         echo "* creating back-out snapshot.."
-        __snapshot ${fulluuid}@ioc-update_${date}
+        __snapshot ${_fulluuid}@ioc-update_${_date}
 
         echo "* Updating jail.."
-        env UNAME_r="$release" env PAGER="/bin/cat" \
+        env UNAME_r="${release}" env PAGER="/bin/cat" \
             /usr/sbin/freebsd-update \
-            -b ${mountpoint}/root \
-            -d ${mountpoint}/root/var/db/freebsd-update/ fetch
-        env UNAME_r="$release" env PAGER="/bin/cat" \
+            -b ${_mountpoint}/root \
+            -d ${_mountpoint}/root/var/db/freebsd-update/ fetch
+        env UNAME_r="${release}" env PAGER="/bin/cat" \
             /usr/sbin/freebsd-update \
-            -b ${mountpoint}/root \
-            -d ${mountpoint}/root/var/db/freebsd-update/ install
+            -b ${_mountpoint}/root \
+            -d ${_mountpoint}/root/var/db/freebsd-update/ install
 
-        echo " "
+        echo
         echo "* Once finished don't forget to remove the snapshot!"
     fi
 }
 
 __upgrade () {
-    local name=$1
-    if [ -z $name ] ; then
-        echo "  ERROR: missing UUID"
-        exit 1
-    fi
-
-    local dataset=$(__find_jail $name)
-
-    if [ -z $dataset ] ; then
-        echo "  ERROR: $name not found"
-        exit 1
-    fi
-
-    if [ $dataset == "multiple" ] ; then
-        echo "  ERROR: multiple matching UUIDs!"
-        exit 1
-    fi
-
-    if [ ! -d $iocroot/download/$release ] ; then
-        echo "  ERROR: $release not found."
+    local _name _dataset _jail_type _fulluuid _mountpoint _date _oldrelease
+    
+    if [ ! -d ${iocroot}/download/${release} ] ; then
+        echo "  ERROR: Release not found: ${release}"
         echo "  Please run iocage fetch first."
         exit 1
     fi
 
-    local fulluuid="$(__check_name $name)"
-    local jail_type="$(__get_jail_prop type $fulluuid)"
-    local jail_release="$(__get_jail_prop release $fulluuid)"
-    local mountpoint="$(__get_jail_prop mountpoint $fulluuid)"
-    local date=$(date "+%F_%T")
-    local oldrelease="$(zfs get -H -o value org.freebsd.iocage:release $dataset)"
+    _name=${1}
+    __check_name "${_name}"
+    
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
 
-    if [ $jail_type == "basejail" ] ; then
-        zfs set org.freebsd.iocage:release="$release" $dataset
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+    _oldrelease=$(__get_dataset_ioc_prop release ${_dataset})
+    _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
+
+    if [ "${_jail_type}" == "basejail" ] ; then
+        __set_dataset_ioc_prop release="${release}" ${_dataset}
         # Re-clone required filesystems
-        __reclone_basejail $name
-        cp -Rp ${mountpoint}/root/etc ${mountpoint}/root/etc.old
-        etcupdate -D ${mountpoint}/root -F \
-        -s $iocroot/base/$release/root/usr/src
-        __chroot "$name" newaliases
-    if [ $? -eq 0 ] ; then
-        echo ""
-        echo "  Upgrade successful. Please restart jail and inspect. Remove ${mountpoint}/root/etc.old if everything is OK."
-        exit 0
-    else
-        echo ""
-        echo "  Etcupdate failed! Backing out."
-        zfs set org.freebsd.iocage:release="$oldrelease" $dataset
-        rm -rf ${mountpoint}/root/etc
-        mv ${mountpoint}/root/etc.old ${mountpoint}/root/etc
-        exit 1
-      fi
+        __reclone_basejail ${_dataset}
+        cp -Rp ${_mountpoint}/root/etc ${_mountpoint}/root/etc.old
+        etcupdate -D ${_mountpoint}/root -F \
+                  -s ${iocroot}/base/${release}/root/usr/src
+        __chroot ${_name} newaliases
+        if [ ${?} -eq 0 ] ; then
+            echo ""
+            echo "  Upgrade successful. Please restart jail and inspect."
+            echo "  Remove ${_mountpoint}/root/etc.old if everything is OK."
+            exit 0
+        else
+            echo ""
+            echo "  Etcupdate failed! Backing out."
+            __set__dataset_ioc_prop release="${_oldrelease}" ${_dataset}
+            rm -rf ${_mountpoint}/root/etc
+            mv ${_mountpoint}/root/etc.old ${_mountpoint}/root/etc
+            exit 1
+        fi
     fi
 
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _date=$(date "+%F_%T")
+    
     echo "* creating back-out snapshot.."
-    __snapshot ${fulluuid}@ioc-upgrade_${date}
+    __snapshot ${_fulluuid}@ioc-upgrade_${_date}
 
     echo "* Upgrading jail.."
 
-    env UNAME_r=${oldrelease} env PAGER="/bin/cat" \
+    env UNAME_r=${_oldrelease} env PAGER="/bin/cat" \
         /usr/sbin/freebsd-update \
-        -b ${mountpoint}/root \
-        -d ${mountpoint}/root/var/db/freebsd-update/ \
-        -r $release upgrade
+        -b ${_mountpoint}/root \
+        -d ${_mountpoint}/root/var/db/freebsd-update/ \
+        -r ${release} upgrade
 
-    if [ $? -eq 0 ] ; then
-        while [ $? -eq 0 ] ; do
-            env UNAME_r=${oldrelease} env PAGER="/bin/cat" \
+    [ ${?} -eq 0 ] ||
+        __fatal_error "Upgrade failed, aborting install."
+
+    while [ ${?} -eq 0 ] ; do
+        env UNAME_r=${_oldrelease} env PAGER="/bin/cat" \
             /usr/sbin/freebsd-update \
-            -b ${mountpoint}/root \
-            -d ${mountpoint}/root/var/db/freebsd-update/ \
-            -r $release install
+            -b ${_mountpoint}/root \
+            -d ${_mountpoint}/root/var/db/freebsd-update/ \
+            -r ${release} install
     done
 
     # Set jail's zfs property to new release
-    zfs set org.freebsd.iocage:release="$release" $dataset
-    else
-       echo "  Upgrade failed, aborting install."
-       exit 1
-    fi
+    __set_dataset_ioc_prop release="${release}" ${_dataset}
 
-    echo " "
+    echo
     echo "* Once finished don't forget to remove the snapshot!"
 }

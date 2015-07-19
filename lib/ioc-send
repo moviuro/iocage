@@ -5,35 +5,30 @@
 # will set up the host for iocage
 
 __init_host () {
-    local _fs _fs_list _host _remote_pool
+    local _host _pool _fs_list _remote_pool _fs
 
-    _host="$1"
-    _pool="$2"
+    _host=${1}
+    __require_not_empty "${_host}" "Missing host name"
+    
+    _pool=${2}
+    __require_not_empty "${_pool}" "Missing pool name"
+    
     _fs_list="${iocroot}/base
               ${iocroot}/download
               ${iocroot}/releases
               ${iocroot}/.defaults"
 
-    if [ -z $_host ] || [ -z $_pool ] ; then
-        echo "ERROR: missing host or pool name"
-        exit 1
-    fi
+    _remote_pool=$(ssh ${_host} zpool get -Ho value name ${_pool})
+    __require_not_empty "${_remote_pool}" "No remote pool ${_pool} found"
 
-    _remote_pool="$(ssh root@$_host zpool get -H -o value name $_pool)"
+    ssh ${_host} "zpool set comment=iocage ${_remote_pool}"
+    ssh ${_host} "zfs create ${_remote_pool}${iocroot}
+                  && zfs set mountpoint=${iocroot} ${_remote_pool}${iocroot}
+                  && mkdir ${iocroot}/log"
 
-    if [ -z "$_remote_pool" ] ; then
-        echo "ERROR: no remote pool $_pool found"
-        exit 1
-    fi
-
-    ssh root@$_host "zpool set comment=iocage $_remote_pool"
-    ssh root@$_host "zfs create ${_remote_pool}${iocroot}
-                     && zfs set mountpoint=${iocroot} ${_remote_pool}${iocroot}
-                     && mkdir ${iocroot}/log"
-
-    for _fs in $(echo $_fs_list) ; do
+    for _fs in ${_fs_list} ; do
         zfs snapshot -r ${pool}${_fs}@init
-        zfs send -vR ${pool}${_fs}@init | ssh root@$_host "zfs recv ${_remote_pool}${_fs}"
+        zfs send -vR ${pool}${_fs}@init | ssh ${_host} "zfs recv ${_remote_pool}${_fs}"
         zfs destroy -r ${pool}${_fs}@init
     done
 }
