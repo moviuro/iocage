@@ -71,8 +71,7 @@ __create_jail () {
 
             for _fs in ${_fs_list} ; do
                 cfs=$(echo ${_fs} | sed s#/releases/${release}#/jails/${uuid}#g)
-                #echo "cloning $fs into $cfs"
-                echo "zfs clone ${_zfsconfig} ${_fs}@${uuid} ${_cfs}" | sh
+                eval "zfs clone ${_zfsconfig} ${_fs}@${uuid} ${_cfs}"
             done
             
             _configured=1
@@ -81,7 +80,7 @@ __create_jail () {
         -e)
             _zfsconfig=$(__configure_jail generate)
 
-            echo "zfs create -p ${_zfsconfig} ${pool}/iocage/jails/${uuid}" | sh
+            eval "zfs create -p ${_zfsconfig} ${pool}/iocage/jails/${uuid}"
             zfs create -p ${pool}/iocage/jails/${uuid}/root
 
             _configured=1
@@ -92,8 +91,8 @@ __create_jail () {
             _zfsconfig=$(__configure_jail generate)
 
             zfs snapshot -r ${pool}/iocage/base@${uuid}
-            echo "zfs create -p ${_zfsconfig} ${pool}/iocage/jails/${uuid}" | sh
-            zfs create -o compression=lz4 -p $pool/iocage/jails/$uuid/root/usr
+            eval "zfs create -p ${_zfsconfig} ${pool}/iocage/jails/${uuid}"
+            zfs create -o compression=lz4 -p ${pool}/iocage/jails/${uuid}/root/usr
 
             for _fs in ${bfs_list} ; do
                 zfs clone -o compression=lz4 -o readonly=on \
@@ -172,7 +171,7 @@ __clone_jail () {
             if [ $(echo ${_cfs} | grep -c data$) -eq 1 ] ; then
                 zfs clone -o mountpoint=none -o jailed=on ${_fs}@${uuid} ${_cfs}
             else
-                echo "zfs clone ${_zfsconfig} ${_fs}@${uuid} ${_cfs}" | sh
+                eval "zfs clone ${_zfsconfig} ${_fs}@${uuid} ${_cfs}"
             fi
         done
     else
@@ -181,7 +180,7 @@ __clone_jail () {
             if [ $(echo ${_cfs} | grep -c data$) -eq 1 ] ; then
                 zfs clone -o mountpoint=none -o jailed=on ${_fs}@${_snapshot} ${_cfs}
             else
-                echo "zfs clone ${_zfsconfig} ${_fs}@${_snapshot} ${_cfs}" | sh
+                eval "zfs clone ${_zfsconfig} ${_fs}@${_snapshot} ${_cfs}"
             fi
         done
     fi

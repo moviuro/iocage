@@ -402,6 +402,7 @@ __fetch_release () {
     local _default_rel _answer _match _rel _file
 
     _default_rel=$(uname -r | cut -f 1,2 -d'-')
+    _match=0
 
     if [ -z "${iocset_release}" ] ; then
 	__print_release
@@ -410,12 +411,11 @@ __fetch_release () {
 	read _answer
 
 	if [ -z "${_answer}" ] ; then
-	    _answer="${release}"
+	    _answer=${release}
 	else
-            _match=0
 	    for _rel in ${supported_releases} ; do
 		if [ "${_answer}" == "${_rel}" ] ; then
-		    release="${_rel}"
+		    release=${_rel}
 		    _match=1
 		    break
 		fi
@@ -441,7 +441,7 @@ __fetch_release () {
         if [ ! -e "${_file}" ] ; then
             fetch http://${ftphost}${ftpdir}/${_file}
             [ ${?} -eq 0 ] ||
-                __faltal_error "Failed fetching ${_file}..."
+                __fatal_error "Failed fetching ${_file}..."
         fi
     done
 

@@ -28,18 +28,20 @@ __configure_jail () {
                 _value=${uuid}
             elif [ ${_prop_name} == "jail_zfs_dataset" ] ; then
                 _value=${jail_zfs_dataset}
-            elif [ ${_prop_name} = "release" ] ; then
+            elif [ ${_prop_name} == "release" ] ; then
                 _value=${release}
-            elif [ ${_prop_name} = "hack88" ] ; then
+            elif [ ${_prop_name} == "hack88" ] ; then
                 _value=${hack88}
-            elif [ ${_prop_name} = "vnet0_mac" ] ; then
+            elif [ ${_prop_name} == "resolver" ] ; then
+                _value=${resolver}
+            elif [ ${_prop_name} == "vnet0_mac" ] ; then
                 case "${vnet0_mac}" in
                     "-")
                         vnet0_mac="none"
                     ;;
                 esac
                 _value=${vnet0_mac}
-            elif [ ${_prop_name} = "vnet1_mac" ] ; then
+            elif [ ${_prop_name} == "vnet1_mac" ] ; then
                 case "${vnet1_mac}" in
                     "-")
                         vnet1_mac="none"
@@ -177,16 +179,17 @@ __reset_jail_props () {
     __check_dataset "${_dataset}" ${_name}
 
     # Cache properties to set again later
-    # (globals...)
+    # (beware, globals...)
     uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-    tag=${iocset_tag}
-    vnet0_mac=${iocset_vnet0_mac}
-    vnet1_mac=${iocset_vnet1_mac}
-    vnet2_mac=${iocset_vnet2_mac}
-    vnet3_mac=${iocset_vnet3_mac}
-    release=${iocset_release}
-    hack88=${iocset_hack88}
-    jail_zfs_dataset=${iocset_jail_zfs_dataset}
+    tag=$(__get_dataset_ioc_prop tag ${_dataset})
+    vnet0_mac=$(__get_dataset_ioc_prop vnet0_mac ${_dataset})
+    vnet1_mac=$(__get_dataset_ioc_prop vnet1_mac ${_dataset})
+    vnet2_mac=$(__get_dataset_ioc_prop vnet2_mac ${_dataset})
+    vnet3_mac=$(__get_dataset_ioc_prop vnet3_mac ${_dataset})
+    release=$(__get_dataset_ioc_prop release ${_dataset})
+    hack88=$(__get_dataset_ioc_prop hack88 ${_dataset})
+    jail_zfs_dataset=$(__get_dataset_ioc_prop jail_zfs_dataset ${_dataset})
+    resolver=$(__get_dataset_ioc_prop resolver ${_dataset})
 
     __configure_jail ${_dataset}
 }

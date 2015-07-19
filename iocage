@@ -30,7 +30,7 @@ unset LANG
 PATH=${PATH}:/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
 
 if [ "${1}" = "--version" -o "${1}" = "version" ] ; then
-    echo "iocage 1.6.6 (2015/07/11)"
+    echo "iocage 1.6.7 (2015/07/17)"
     exit 0
 fi
 
@@ -47,10 +47,10 @@ if [ "$(uname -K)" -lt "903000" ]; then
 fi
 
 # Check if libs are available
-if [ -e "/usr/local/lib/iocage" ] ; then
-    LIB="/usr/local/lib/iocage"
-elif [ -e "./lib" ] ; then
+if [ -e "./lib/ioc-common" ] ; then
     LIB="./lib"
+elif [ -e "/usr/local/lib/iocage" ] ; then
+    LIB="/usr/local/lib/iocage"
 else
     echo "ERROR: missing libraries"
     exit 1

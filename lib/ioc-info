@@ -117,7 +117,7 @@ __list_jails () {
         _releases=$(zfs list -o name -Hr ${pool}/iocage/releases \
                     | awk -F/ '/RELEASE$/ { print $4 }')
         for _rel in ${_releases} ; do
-            printf "%15s\n" "${_rel}"
+            printf "%15s\n" ${_rel}
         done
         exit 0
     fi
@@ -129,8 +129,9 @@ __list_jails () {
         _tag=$(__get_dataset_ioc_prop tag ${_jail})
         _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_jail})
         _template=$(__get_dataset_ioc_prop template ${_jail})
+
         # get jid for iocage jails
-        _jid=$(jls -j "ioc-${_uuid}" jid 2> /dev/null)
+        _jid=$(jls -j ioc-${_uuid} jid 2> /dev/null)
         if [ -z "${_jid}"  ] ; then
             _jid="-"
         fi
@@ -266,6 +267,7 @@ __get_jail_prop () {
         if [ ${_prop} == ${_property} ] ; then
             _found=1
             _value=$(__get_dataset_ioc_prop ${_prop} ${_dataset})
+
             # Fix nonexistent property problem (zfs get returns "-")
             # info: https://github.com/iocage/iocage/issues/76
             if [ "${_value}" == "-" ] ; then

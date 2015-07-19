@@ -344,7 +344,7 @@ __stop_jail () {
     echo "* Stopping ${_fulluuid} (${_tag})"
 
     echo -n "  + Running pre-stop"
-    echo "${_exec_prestop}" | sh
+    eval "${_exec_prestop}"
     if [ ${?} -eq 0 ] ; then
         echo "         OK"
     else
@@ -384,7 +384,7 @@ __stop_jail () {
     fi
 
     echo -n "  + Running post-stop"
-    echo "${_exec_poststop}" | sh
+    eval "${_exec_poststop}"
     if [ ${?} -eq 0 ] ; then
         echo "        OK"
     else
