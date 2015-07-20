@@ -410,7 +410,7 @@ __stop_jail () {
 
 # Soft restart
 __restart_jail () {
-    local _name _dataset _fulluuid _exec_stop _exec_start _jid _tag
+    local _name _dataset _fulluuid _exec_stop _exec_start _jid _tag _date
     
     _name=${1}
     __check_name "${_name}"
@@ -420,69 +420,87 @@ __restart_jail () {
     
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _exec_stop=$(__get_dataset_ioc_prop exec_stop ${_dataset})
-    _exec_start=$(__get_dataset_ioc_prop exec_start ${_dataset})
-    _jid=$(jls -j ioc-${_fulluuid} jid)
     _tag=$(__get_dataset_ioc_prop tag ${_dataset})
 
     echo "* Soft restarting ${_fulluuid} (${_tag})"
+
     jexec ioc-${_fulluuid} ${_exec_stop} >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
-    if [ ${?} -eq 0 ] ; then
-        pkill -j ${_jid}
-        jexec ioc-${_fulluuid} ${_exec_start} >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
-        zfs set org.freebsd.iocage:last_started=$(date "+%F_%T") ${_dataset}
-    else
+    [ ${?} -eq 0 ] ||
         __fatal_error "Soft restart failed."
-    fi
+
+    _jid=$(jls -j ioc-${_fulluuid} jid)
+    _exec_start=$(__get_dataset_ioc_prop exec_start ${_dataset})
+    _date=$(date "+%F_%T")
+
+    pkill -j ${_jid}
+    jexec ioc-${_fulluuid} ${_exec_start} >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
+    __set_dataset_ioc_prop last_started=${_date} ${_dataset}
 }
 
 __rc_jails () {
-    local _action _jails _boot_list _jail _name _boot _priority
-    local _boot_order _shutdown_order _i
-    
+    local _action _jails _boot_list _jail _boot _priority _uuid
+    local _boot_order _previous_priority _i _shutdown_order
+
     _action=${1}
     _jails=$(__find_jail ALL)
-    _boot_list="/tmp/iocage.${$}"
+    _boot_list=""
 
     for _jail in ${_jails} ; do
-        _name=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
         _boot=$(__get_dataset_ioc_prop boot ${_jail})
-        _priority=$(__get_dataset_ioc_prop priority ${_jail})
 
         if [ "${_boot}" == "on" ] ; then
-            echo "${_priority},${_name}" >> ${_boot_list}
+            _priority=$(__get_dataset_ioc_prop priority ${_jail})
+            _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+            _boot_list="${_boot_list}"$'\n'"${_priority},${_uuid}"
         fi
     done
 
-    if [ -e "${_boot_list}" ] ; then
-        _boot_order=$(sort -n ${_boot_list})
-        _shutdown_order=$(sort -rn ${_boot_list})
-    else
+    [ -n "${_boot_list}" ] ||
         __fatal_error "None of the jails have boot on."
-    fi
+
+    _previous_priority=0
 
     if [ "${_action}" == "boot" ] ; then
+        _boot_order=$(echo ${_boot_list} | sort -n)
+
         echo "* [I|O|C] booting jails... "
 
         for _i in ${_boot_order} ; do
-            _jail=${_i#*,}
-           
-            if ! __is_running ${_jail} ; then
-                __start_jail ${_jail}
+            _priority=${_i%%,*}
+            _uuid=${_i#*,}
+
+            if [ ${_priority} -ne ${_previous_priority} ] ; then
+                wait
             fi
+
+            if ! __is_running ${_uuid} ; then
+                __start_jail ${_uuid} &
+            fi
+
+            _previous_priority=${_priority}
         done
 
     elif [ "${_action}" == "shutdown" ] ; then
+        _shutdown_order=$(echo ${_boot_list} | sort -rn)
+
         echo "* [I|O|C] shutting down jails... "
 
         for _i in ${_shutdown_order} ; do
-            _jail=${_i#*,}
-            
-            if __is_running ${_jail} ; then
-                __stop_jail ${_jail}
+            _priority=${_i%%,*}
+            _uuid=${_i#*,}
+
+            if [ ${_priority} -ne ${_previous_priority} ] ; then
+                wait
             fi
+
+            if __is_running ${_uuid} ; then
+                __stop_jail ${_uuid} &
+            fi
+
+            _previous_priority=${_priority}
         done
 
     fi
 
-    rm -f ${_boot_list}
+    wait
 }
