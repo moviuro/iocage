@@ -251,7 +251,6 @@ __get_jail_prop () {
     __require_single_word "${_property}" "Invalid property: ${_property}"
 
     _name=${2}
-    __check_name "${_name}"
     
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
@@ -322,7 +321,6 @@ __runtime () {
     local _name _dataset _fulluuid _params _param
 
     _name=${1}
-    __check_name "${_name}"
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
@@ -343,16 +341,7 @@ __findscript () {
     local _name _type _mountpoint
     
     _name=${1}
-    __check_name "${_name}"
-    
-    # type should be one of prestart|poststart|prestop|poststop
     _type=${2}
-    __require_not_empty "${_type}" "Missing type argument."
-    case "${_type}" in
-        prestart|poststart|prestop|poststop) ;;
-        *) __fatal_error "Unsupported script type: ${_type}" ;;
-    esac
-    
     _mountpoint=$(__get_jail_prop mountpoint ${_name})
 
     if [ -x "${_mountpoint}/${_type}" ]; then
@@ -367,5 +356,5 @@ __is_running () {
     
     _fulluuid=${1}
 
-    jls name | grep -q "ioc-${_fulluuid}"
+    jls name | grep -q ioc-${_fulluuid}
 }

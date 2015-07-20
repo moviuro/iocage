@@ -4,129 +4,215 @@
 __parse_cmd () {
     while [ ${#} -gt 0 ] ; do
         case "${1}" in
-            activate)   __activate "${2}"
-                        exit
+            activate)
+                __require_not_empty "${2}" "Missing pool name!"
+                __require_single_word "${2}" "Invalid pool name!"
+                __activate ${2}
+                exit
                 ;;
-            cap)        __rctl_limits "${2}"
-                        exit
+            cap)
+                __check_name "${2}"
+                __rctl_limits ${2}
+                exit
                 ;;
-            chroot)     __chroot "${2}" "${3}"
-                        exit
+            chroot)
+                __check_name "${2}"
+                shift
+                __chroot "${@}"
+                exit
                 ;;
-            clone)      __export_props "${@}"
-                        __clone_jail "${2}"
-                        exit
+            clone)
+                __check_name "${2}"
+                __export_props "${@}"
+                __clone_jail ${2}
+                exit
                 ;;
-            console)    __console "${2}"
-                        exit
+            console)
+                __check_name "${2}"
+                __console ${2}
+                exit
                 ;;
-            create)     shift
-                        __export_props "${@}"
-                        __create_jail "${@}"
-                        exit
+            create)
+                shift
+                __export_props "${@}"
+                __create_jail "${@}"
+                exit
                 ;;
-            defaults)   __print_defaults
-                        exit
+            defaults)
+                __print_defaults
+                exit
                 ;;
-            destroy)    __destroy_jail "${2}" "${3}"
-                        exit
+            destroy)
+                if [ "${2}" != "-f" ] ; then
+                    __check_name_all "${2}"
+                else
+                    __check_name_all "${3}"
+                fi
+                __destroy_jail ${2} ${3}
+                exit
                 ;;
-            df)         __print_disk
-                        exit
+            df)
+                __print_disk
+                exit
                 ;;
-            exec)       shift
-                        __exec "${@}"
-                        exit
+            exec)
+                if [ "${2}" != "-u" ] && [ "${2}" != "-U" ] ; then
+                    __check_name_all "${2}"
+                else
+                    __check_name_all "${4}"
+                fi
+                shift
+                __exec "${@}"
+                exit
                 ;;
-            export)     __export "${2}"
-                        exit
+            export)
+                __check_name "${2}"
+                __export ${2}
+                exit
                 ;;
-            fetch)      __export_props "${@}"
-                        __fetch_release
-                        exit
+            fetch)
+                __export_props "${@}"
+                __fetch_release
+                exit
                 ;;
-            get)        __get_jail_prop "${2}" "${3}"
-                        exit
+            get)
+                __require_not_empty "${2}" "Missing arguments!"
+                __require_single_word "${2}" "Invalid property!"
+                __check_name "${3}"
+                __get_jail_prop ${2} ${3}
+                exit
                 ;;
-            help)       __help
-                        exit
+            help)
+                __help
+                exit
                 ;;
-            init-host)  __init_host "${2}" "${3}"
-                        exit
+            init-host)
+                __require_not_empty "${2}" "Missing arguments!"
+                __require_single_word "${2}" "Invalid IP!"
+                __require_not_empty "${3}" "Missing pool name!"
+                __require_single_word "${3}" "Invalid pool name!"
+                __init_host ${2} ${3}
+                exit
                 ;;
-            inuse)      __rctl_inuse "${2}"
-                        exit
+            inuse)
+                __rctl_inuse "${2}"
+                exit
                 ;;
-            import)     __export_props "${@}"
-                        __import "${2}"
-                        exit
+            import)
+                __check_name "${2}"
+                __export_props "${@}"
+                __import ${2}
+                exit
                 ;;
-            limits)     __rctl_list "${2}"
-                        exit
+            limits)
+                __rctl_list "${2}"
+                exit
                 ;;
-            list)       __list_jails "${2}"
-                        exit
+            list)
+                __list_jails "${2}"
+                exit
                 ;;
-            package)    __package "${2}"
-                        exit
+            package)
+                __check_name "${2}"
+                __package ${2}
+                exit
                 ;;
-            promote)    __promote "${2}"
-                        exit
+            promote)
+                __check_name "${2}"
+                __promote ${2}
+                exit
                 ;;
-            rcboot)     __rc_jails boot
-                        exit
+            rcboot)
+                __rc_jails boot
+                exit
                 ;;
-            rcshutdown) __rc_jails shutdown
-                        exit
+            rcshutdown)
+                __rc_jails shutdown
+                exit
                 ;;
-            record)     __record "${2}" "${3}"
-                        exit
+            record)
+                __require_not_empty "${2}" "Missing arguments!"
+                __require_single_word "${2}" "Invalid action! Must be one of start|stop"
+                __check_name "${3}"
+                __record ${2} ${3}
+                exit
                 ;;
-            reset)      __reset_jail_props "${2}"
-                        exit
+            reset)
+                __check_name_all "${2}"
+                __reset_jail_props ${2}
+                exit
                 ;;
-            restart)    __restart_jail "${2}"
-                        exit
+            restart)
+                __check_name "${2}"
+                __restart_jail ${2}
+                exit
                 ;;
-            rollback)   __rollback "${2}"
-                        exit
+            rollback)
+                __check_name "${2}"
+                __rollback ${2}
+                exit
                 ;;
-            runtime)    __runtime "${2}"
-                        exit
+            runtime)
+                __check_name "${2}"
+                __runtime ${2}
+                exit
                 ;;
-            set)        __export_props "${@}"
-                        __set_jail_prop "${2}" "${3}"
-                        exit
+            set)
+                __require_not_empty "${2}" "Missing arguments!"
+                __check_name "${3}"
+                __export_props "${@}"
+                __set_jail_prop "${2}" ${3}
+                exit
                 ;;
-            show)       __show "${2}"
-                        exit
+            show)
+                __require_not_empty "${2}" "Missing property name!"
+                __require_single_word "${2}" "Invalid property name!"
+                __show ${2}
+                exit
                 ;;
-            snaplist)   __snaplist "${2}"
-                        exit
+            snaplist)
+                __check_name "${2}"
+                __snaplist ${2}
+                exit
                 ;;
-            snapremove) __snapremove "${2}"
-                        exit
+            snapremove)
+                __check_name_all "${2}"
+                __snapremove ${2}
+                exit
                 ;;
-            snapshot)   __snapshot "${2}"
-                        exit
+            snapshot)
+                __check_name "${2}"
+                __snapshot ${2}
+                exit
                 ;;
-            start)      __start_jail "${2}"
-                        exit
+            start)
+                __check_name "${2}"
+                __start_jail ${2}
+                exit
                 ;;
-            stop)       __stop_jail "${2}"
-                        exit
+            stop)
+                __check_name "${2}"
+                __stop_jail ${2}
+                exit
                 ;;
-            uncap)      __rctl_uncap "${2}"
-                        exit
+            uncap)
+                __check_name "${2}"
+                __rctl_uncap ${2}
+                exit
                 ;;
-            update)     __update "${2}"
-                        exit
+            update)
+                __check_name "${2}"
+                __update ${2}
+                exit
                 ;;
-            upgrade)     __upgrade "${2}"
-                        exit
+            upgrade)
+                __check_name "${2}"
+                __upgrade ${2} "${3}"
+                exit
                 ;;
-                *)      __usage
-                        exit
+            *)
+                __usage
+                exit
                 ;;
         esac
         shift

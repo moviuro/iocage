@@ -155,7 +155,6 @@ __reset_jail_props () {
     local _name _dataset _answer
 
     _name=${1}
-    __check_name_all "${_name}"
 
     if [ ${_name} == "ALL" ] ; then
         echo " "

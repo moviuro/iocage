@@ -249,7 +249,6 @@ __set_jail_prop () {
     __require_not_empty "${_property}" "Missing property!"
 
     _name=${2}
-    __check_name "${_name}"
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
@@ -311,7 +310,6 @@ __console () {
     local _name _dataset _fulluuid _login_flags _jexec _exec_fib
 
     _name=${1}
-    __check_name "${_name}"
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
@@ -348,7 +346,6 @@ __exec () {
     shift $(expr ${OPTIND} - 1)
 
     _name=${1}
-    __check_name_all "${_name}"
     shift
 
     if [ ${_name} == "ALL" ]; then
@@ -384,7 +381,6 @@ __chroot () {
     local _name _dataset _fulluuid _mountpoint _command
 
     _name=${1}
-    __check_name "${_name}"
     
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
