@@ -71,14 +71,14 @@ __find_jail () {
         done
     fi
     
-    _jlist="/tmp/iocage-jail-list.${$}"
+    _jlist=""
     _count=0
     for _jail in ${_jails} ; do
         _found=$(echo ${_jail} | grep -iEc "^${pool}/iocage/jails/${_name}")
         
         if [ ${_found} -gt 0 ] ; then
             : $((_count += _found))
-            echo ${_jail} >> ${_jlist}
+            _jlist=${_jail}
             continue
         fi
 
@@ -86,19 +86,17 @@ __find_jail () {
 
         if [ "${_tag}" == "${_name}" ] ; then
             : $((_count += 1))
-            echo ${_jail} >> ${_jlist}
+            _jlist=${_jail}
         fi
     done
 
     if [ ${_count} -eq 0 ] ; then
         exit 0
     elif [ ${_count} -eq 1 ] ; then
-        cat ${_jlist}
+        echo ${_jlist}
     elif [ ${_count} -gt 1 ] ; then
         echo "multiple"
     fi
-
-    rm -f ${_jlist}
 }
 
 __list_jails () {
