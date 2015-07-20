@@ -151,7 +151,7 @@ __create_jail () {
 
 # Cloning jails ----------------------------------------------------------
 __clone_jail () {
-    local _name _snapshot _dataset _zfsconfig _fs_list _fs _cfs
+    local _name _snapshot _dataset _zfsconfig _fs_list _fs _cfs _mountpoint
 
     _name=${1%%@*}
     __check_name "${_name}"
@@ -185,16 +185,15 @@ __clone_jail () {
         done
     fi
 
-    #__configure_jail $pool/iocage/jails/$uuid
-    mv ${iocroot}/jails/${uuid}/fstab ${iocroot}/jails/${uuid}/fstab.${_name}
-    touch $iocroot/jails/${uuid}/fstab
+    _dataset=${pool}/iocage/jails/${uuid}
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
-    cat ${iocroot}/jails/${uuid}/root/etc/rc.conf | \
+    mv ${_mountpoint}/fstab ${_mountpoint}/fstab.${_name}
+    touch ${_mountpoint}/fstab
+
+    cat ${_mountpoint}/root/etc/rc.conf | \
         sed -E "s/[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}/${uuid}/g" \
-            > ${iocroot}/jails/${uuid}/rc.conf
-
-    mv ${iocroot}/jails/${uuid}/rc.conf \
-       ${iocroot}/jails/${uuid}/root/etc/rc.conf
+            > ${_dataset}/root/etc/rc.conf
 }
 
 # Destroy jails --------------------------------------------------------------
@@ -233,7 +232,7 @@ __destroy_all () {
         echo "  Destroying all jails"
         _jails=$(__find_jail ALL)
 
-        for _jail in $_jails ; do
+        for _jail in ${_jails} ; do
             _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
             __destroy_func 1 ${_fulluuid}
         done

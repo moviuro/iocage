@@ -13,9 +13,9 @@ __snapshot () {
 
     if [ -z "${_snapshot}" ] ; then
         _date=$(date "+%F_%T")
-        zfs snapshot -r ${dataset}@ioc-${date}
+        zfs snapshot -r ${_dataset}@ioc-${_date}
     else
-        zfs snapshot -r ${dataset}@${snapshot}
+        zfs snapshot -r ${_dataset}@${_snapshot}
     fi
 }
 
@@ -108,7 +108,7 @@ __promote () {
             echo "* promoting filesystem: ${_fs}"
             zfs promote ${_fs}
         else
-            echo "  INFO: filesystem $fs is not a clone"
+            echo "  INFO: filesystem ${_fs} is not a clone"
         fi
     done
 }

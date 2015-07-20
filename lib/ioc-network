@@ -31,7 +31,7 @@ __generate_mac () {
 
 # Expects input: _nic _mac_offset _epair_leg _uuid
 # outputs a single mac address
-# Example: __validate_mac ${nic} ${_mac_offset} a ${_uuid}
+# Example: __validate_mac ${_nic} ${_mac_offset} a ${_uuid}
 __validate_mac () {
     local _nic _mac_offset _epair_leg _dataset _mac _return
 
