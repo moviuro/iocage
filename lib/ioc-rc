@@ -461,7 +461,7 @@ __rc_jails () {
     _previous_priority=0
 
     if [ "${_action}" == "boot" ] ; then
-        _boot_order=$(echo ${_boot_list} | sort -n)
+        _boot_order=$(echo "${_boot_list}" | sort -n)
 
         echo "* [I|O|C] booting jails... "
 
@@ -481,7 +481,7 @@ __rc_jails () {
         done
 
     elif [ "${_action}" == "shutdown" ] ; then
-        _shutdown_order=$(echo ${_boot_list} | sort -rn)
+        _shutdown_order=$(echo "${_boot_list}" | sort -rn)
 
         echo "* [I|O|C] shutting down jails... "
 
