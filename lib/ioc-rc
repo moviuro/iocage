@@ -448,7 +448,8 @@ __rc_jails () {
         if [ "${_boot}" == "on" ] ; then
             _priority=$(__get_dataset_ioc_prop priority ${_jail})
             _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
-            _boot_list="${_boot_list}"$'\n'"${_priority},${_uuid}"
+            _boot_list="${_boot_list}
+                        ${_priority},${_uuid}"
         fi
     done
 
@@ -458,7 +459,7 @@ __rc_jails () {
     _previous_priority=0
 
     if [ "${_action}" == "boot" ] ; then
-        _boot_order=$(echo "${_boot_list}" | sort -n)
+        _boot_order=$(echo "${_boot_list}" | awk NF | sort -nb)
 
         echo "* [I|O|C] booting jails... "
 
@@ -478,7 +479,7 @@ __rc_jails () {
         done
 
     elif [ "${_action}" == "shutdown" ] ; then
-        _shutdown_order=$(echo "${_boot_list}" | sort -rn)
+        _shutdown_order=$(echo "${_boot_list}" | awk NF | sort -rnb)
 
         echo "* [I|O|C] shutting down jails... "
 
