@@ -1,12 +1,9 @@
 #!/bin/sh
 
 __update () {
-    local _name _dataset _jail_type _fulluuid _mountpoint _date _jail_release
+    local _dataset _jail_type _fulluuid _mountpoint _date _jail_release
     
-    _name=${1}
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
 
     _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
 
@@ -16,11 +13,11 @@ __update () {
     else
         _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
         _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-        _date=$(date "+%F_%T")
         _jail_release=$(__get_dataset_ioc_prop release ${_dataset})
+        _date=$(date "+%F_%T")
 
         echo "* creating back-out snapshot.."
-        __snapshot ${_fulluuid}@ioc-update_${_date}
+        __snapshot ${_dataset} ioc-update_${_date}
 
         echo "* Updating jail.."
         env UNAME_r="${release}" env PAGER="/bin/cat" \
@@ -38,7 +35,7 @@ __update () {
 }
 
 __upgrade () {
-    local _name _dataset _jail_type _fulluuid _mountpoint _date _oldrelease
+    local _dataset _jail_type _fulluuid _mountpoint _date _oldrelease
     
     if [ ! -d ${iocroot}/download/${release} ] ; then
         echo "  ERROR: Release not found: ${release}"
@@ -46,10 +43,7 @@ __upgrade () {
         exit 1
     fi
 
-    _name=${1}
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
 
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
     _oldrelease=$(__get_dataset_ioc_prop release ${_dataset})
@@ -62,7 +56,7 @@ __upgrade () {
         cp -Rp ${_mountpoint}/root/etc ${_mountpoint}/root/etc.old
         etcupdate -D ${_mountpoint}/root -F \
                   -s ${iocroot}/base/${release}/root/usr/src
-        __chroot ${_name} newaliases
+        __chroot ${_dataset} newaliases
         if [ ${?} -eq 0 ] ; then
             echo ""
             echo "  Upgrade successful. Please restart jail and inspect."
@@ -82,7 +76,7 @@ __upgrade () {
     _date=$(date "+%F_%T")
     
     echo "* creating back-out snapshot.."
-    __snapshot ${_fulluuid}@ioc-upgrade_${_date}
+    __snapshot ${_dataset} ioc-upgrade_${_date}
 
     echo "* Upgrading jail.."
 

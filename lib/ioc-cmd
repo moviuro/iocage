@@ -2,40 +2,34 @@
 #set -x
 # Process command line options-------------------------
 __parse_cmd () {
+    local _cmd
+    
     while [ ${#} -gt 0 ] ; do
-        case "${1}" in
+        _cmd=${1}
+        shift
+        case "${_cmd}" in
             activate)
-                __require_not_empty "${2}" "Missing pool name!"
-                __require_single_word "${2}" "Invalid pool name!"
-                __activate ${2}
+                __cmd_activate "${@}"
                 exit
                 ;;
             cap)
-                __check_name "${2}"
-                __rctl_limits ${2}
+                __cmd_cap "${@}"
                 exit
                 ;;
             chroot)
-                __check_name "${2}"
-                shift
-                __chroot "${@}"
+                __cmd_chroot "${@}"
                 exit
                 ;;
             clone)
-                __check_name "${2}"
-                __export_props "${@}"
-                __clone_jail ${2}
+                __cmd_clone "${@}"
                 exit
                 ;;
             console)
-                __check_name "${2}"
-                __console ${2}
+                __cmd_console "${@}"
                 exit
                 ;;
             create)
-                shift
-                __export_props "${@}"
-                __create_jail "${@}"
+                __cmd_create "${@}"
                 exit
                 ;;
             defaults)
@@ -43,12 +37,7 @@ __parse_cmd () {
                 exit
                 ;;
             destroy)
-                if [ "${2}" != "-f" ] ; then
-                    __check_name_all "${2}"
-                else
-                    __check_name_all "${3}"
-                fi
-                __destroy_jail ${2} ${3}
+                __cmd_destroy "${@}"
                 exit
                 ;;
             df)
@@ -56,30 +45,19 @@ __parse_cmd () {
                 exit
                 ;;
             exec)
-                if [ "${2}" != "-u" ] && [ "${2}" != "-U" ] ; then
-                    __check_name_all "${2}"
-                else
-                    __check_name_all "${4}"
-                fi
-                shift
-                __exec "${@}"
+                __cmd_exec "${@}"
                 exit
                 ;;
             export)
-                __check_name "${2}"
-                __export ${2}
+                __cmd_export "${@}"
                 exit
                 ;;
             fetch)
-                __export_props "${@}"
-                __fetch_release
+                __cmd_fetch "${@}"
                 exit
                 ;;
             get)
-                __require_not_empty "${2}" "Missing arguments!"
-                __require_single_word "${2}" "Invalid property!"
-                __check_name "${3}"
-                __get_jail_prop ${2} ${3}
+                __cmd_get "${@}"
                 exit
                 ;;
             help)
@@ -87,39 +65,31 @@ __parse_cmd () {
                 exit
                 ;;
             init-host)
-                __require_not_empty "${2}" "Missing arguments!"
-                __require_single_word "${2}" "Invalid IP!"
-                __require_not_empty "${3}" "Missing pool name!"
-                __require_single_word "${3}" "Invalid pool name!"
-                __init_host ${2} ${3}
+                __cmd_init_host "${@}"
                 exit
                 ;;
             inuse)
-                __rctl_inuse "${2}"
+                __cmd_inuse "${@}"
                 exit
                 ;;
             import)
-                __check_name "${2}"
-                __export_props "${@}"
-                __import ${2}
+                __cmd_import "${@}"
                 exit
                 ;;
             limits)
-                __rctl_list "${2}"
+                __cmd_limits "${@}"
                 exit
                 ;;
             list)
-                __list_jails "${2}"
+                __list_jails "${@}"
                 exit
                 ;;
             package)
-                __check_name "${2}"
-                __package ${2}
+                __cmd_package "${@}"
                 exit
                 ;;
             promote)
-                __check_name "${2}"
-                __promote ${2}
+                __cmd_promote "${@}"
                 exit
                 ;;
             rcboot)
@@ -131,83 +101,63 @@ __parse_cmd () {
                 exit
                 ;;
             record)
-                __require_not_empty "${2}" "Missing arguments!"
-                __require_single_word "${2}" "Invalid action! Must be one of start|stop"
-                __check_name "${3}"
-                __record ${2} ${3}
+                __cmd_record "${@}"
                 exit
                 ;;
             reset)
-                __check_name_all "${2}"
-                __reset_jail_props ${2}
+                __cmd_reset "${@}"
                 exit
                 ;;
             restart)
-                __check_name "${2}"
-                __restart_jail ${2}
+                __cmd_restart "${@}"
                 exit
                 ;;
             rollback)
-                __check_name "${2}"
-                __rollback ${2}
+                __cmd_rollback "${@}"
                 exit
                 ;;
             runtime)
-                __check_name "${2}"
-                __runtime ${2}
+                __cmd_runtime "${@}"
                 exit
                 ;;
             set)
-                __require_not_empty "${2}" "Missing arguments!"
-                __check_name "${3}"
-                __export_props "${@}"
-                __set_jail_prop "${2}" ${3}
+                __cmd_set "${@}"
                 exit
                 ;;
             show)
-                __require_not_empty "${2}" "Missing property name!"
-                __require_single_word "${2}" "Invalid property name!"
-                __show ${2}
+                __cmd_show "${@}"
                 exit
                 ;;
             snaplist)
-                __check_name "${2}"
-                __snaplist ${2}
+                __cmd_snaplist "${@}"
                 exit
                 ;;
             snapremove)
-                __check_name_all "${2}"
-                __snapremove ${2}
+                __cmd_snapremove "${@}"
                 exit
                 ;;
             snapshot)
-                __check_name "${2}"
-                __snapshot ${2}
+                __cmd_snapshot "${@}"
                 exit
                 ;;
             start)
-                __check_name "${2}"
-                __start_jail ${2}
+                __cmd_start "${@}"
                 exit
                 ;;
             stop)
-                __check_name "${2}"
-                __stop_jail ${2}
+                __cmd_stop "${@}"
                 exit
                 ;;
             uncap)
-                __check_name "${2}"
-                __rctl_uncap ${2}
+                __cmd_uncap "${@}"
                 exit
                 ;;
             update)
-                __check_name "${2}"
-                __update ${2}
+                __cmd_update "${@}"
                 exit
                 ;;
             upgrade)
-                __check_name "${2}"
-                __upgrade ${2} "${3}"
+                __cmd_upgrade "${@}"
                 exit
                 ;;
             *)
@@ -217,4 +167,503 @@ __parse_cmd () {
         esac
         shift
     done
+}
+
+__cmd_activate () {
+    local _pool
+
+    _pool=${1}
+    __require_not_empty "${_pool}" "Missing pool name!"
+    __require_single_word "${_pool}" "Invalid pool name!"
+
+    __activate ${_pool}
+}
+
+__cmd_cap () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __rctl_limits ${_dataset}
+}
+
+__cmd_chroot () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    shift
+    __chroot ${_dataset} "${@}"
+}
+
+__cmd_clone () {
+    local _name _snapshot _dataset
+
+    _name=${1%%@*}
+    __check_name "${_name}"
+    
+    _snapshot=${1#${_name}}
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    shift
+    __export_props "${@}"
+    __clone_jail ${_dataset} ${_snapshot%@}
+}
+
+__cmd_console () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __console ${_dataset}
+}
+
+__cmd_create () {
+    __export_props "${@}"
+    __create_jail "${@}"
+}
+
+__cmd_destroy () {
+    local _name _force _answer _dataset _fulluuid _tag
+
+    if [ "${1}" != "-f" ] ; then
+        _name=${1}
+        _force=0
+    else
+        _name=${2}
+        _force=1
+    fi
+
+    __check_name_all "${_name}"
+
+    if [ ${_name} == "ALL" ] ; then
+        if [ ${_force} -eq 0 ] ; then
+            echo
+            echo "  WARNING: this will destroy ALL jails"
+            echo
+            echo "  Please make sure all jails are stopped before continuing."
+            echo
+            echo -n "  Are you sure ? y[N]: "
+            read _answer
+
+            if [ "${_answer}" != "Y" ] && [ "${_answer}" != "y" ] ; then
+                echo "  Command not confirmed.  No action taken."
+                exit 1
+            fi
+        fi
+
+        __destroy_all ${_force}
+    else
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
+
+        if [ ${_force} -eq 0 ] ; then
+            _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+            _tag=$(__get_dataset_ioc_prop tag ${_dataset})
+            echo
+            echo "  WARNING: this will destroy jail ${_fulluuid} (${_tag})"
+            echo "  Dataset: ${_dataset}"
+            echo
+            echo -n "  Are you sure ? y[N]: "
+            read _answer
+
+            if [ "${_answer}" != "Y" ] && [ "${_answer}" != "y" ] ; then
+                echo "  Command not confirmed.  No action taken."
+                exit 1
+            fi
+        fi
+
+        __destroy_jail ${_dataset} ${_force}
+    fi
+}
+
+__cmd_exec () {
+    local _kexecopts _opt _name _dataset
+    
+    OPTIND=1
+    _jexecopts=""
+
+    # check for -U or -u to pass to jexec
+    while getopts u:U: _opt "${@}"; do
+        case "${_opt}" in
+            [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}";;
+            ?)    __fatal_error "Invalid exec option: ${_opt}";;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    _name=${1}
+    __check_name_all "${_name}"
+
+    shift
+
+    if [ ${_name} == "ALL" ]; then
+        __exec_all ${_jexecopts} "${@}"
+    else
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
+        
+        __exec ${_jexecopts} ${_dataset} "${@}"
+    fi
+}
+
+__cmd_export () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    __export ${_dataset}
+}
+
+__cmd_fetch () {
+    __export_props "${@}"
+    __fetch_release
+}
+
+__cmd_get () {
+    local _property _name _dataset
+
+    _property=${1}
+    __require_not_empty "${_property}" "Missing arguments!"
+    __require_single_word "${_property}" "Invalid property!"
+
+    _name=${2}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    __get_jail_prop ${_property} ${_dataset}
+}
+
+__cmd_init_host () {
+    local _remote _pool
+
+    _remote=${1}
+    __require_not_empty "${_remote}" "Missing arguments!"
+    __require_single_word "${_remote}" "Invalid remote host!"
+
+    _pool=${2}
+    __require_not_empty "${_pool}" "Missing pool name!"
+    __require_single_word "${_pool}" "Invalid pool name!"
+
+    __init_host ${_remote} ${_pool}
+}
+
+__cmd_inuse () {
+    local _name _dataset
+
+    _name=${1}
+
+    if [ -z "${_name}" ] ; then
+        __rctl_inuse_all
+    else
+        __check_name "${_name}"
+
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
+    
+        __rctl_inuse ${_dataset}
+    fi
+}
+
+__cmd_import () {
+    local _name
+
+    _name=${1}
+    __check_name "${_name}"
+
+    shift
+    __export_props "${@}"
+    __import ${_name}
+}
+
+__cmd_limits () {
+    local _name _dataset
+
+    _name=${1}
+
+    if [ -z "${_name}" ] ; then
+        __rctl_list_all
+    else
+        __check_name "${_name}"
+
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
+    
+        __rctl_list ${_dataset}
+    fi
+}
+
+__cmd_package () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __package ${_dataset}
+}
+
+__cmd_promote () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __promote ${_dataset}
+}
+
+__cmd_record () {
+    local _action _name _dataset
+
+    _action=${1}
+    __require_not_empty "${_action}" "Missing arguments!"
+    [ "${_action}" == "start" ] || [ "${_action}" == "stop" ] ||
+        __fatal_error "Invalid action! Must be one of start|stop"
+
+    _name=${2}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    __record ${_action} ${_dataset}
+}
+
+__cmd_reset () {
+    local _name _force _answer _dataset
+
+    if [ "${1}" != "-f" ] ; then
+        _name=${1}
+        _force=0
+    else
+        _name=${2}
+        _force=1
+    fi 
+
+    __check_name_all "${_name}"
+
+    if [ ${_name} == "ALL" ] ; then
+        if [ ${_force} -eq 0 ] ; then
+            echo
+            echo "  WARNING: This will reset ALL jails!"
+            echo
+            echo -n "  Are you sure? y[N]: "
+            read _answer
+
+            if [ "${_answer}" != "Y" ] && [ "${_answer}" != "y" ] ; then
+                echo "  Command not confirmed.  No action taken."
+                exit 1
+            fi
+        fi
+
+        echo "  Resetting all jails."
+
+        __reset_jail_props_all
+    else
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
+        
+        __reset_jail_props ${_dataset}
+    fi
+}
+
+__cmd_restart () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __restart_jail ${_dataset}
+}
+
+__cmd_rollback () {
+    local _name _snapshot _dataset
+
+    _name=${1%%@*}
+    __check_name "${_name}"
+
+    _snapshot=${1#${_name}}
+    __require_not_empty "${_snapshot%@}" "Missing snapshot name!"
+    __require_single_word "${_snapshot%@}" "Invalid snapshot name: ${_snapshot}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    __rollback ${_dataset} ${_snapshot%@}
+}
+
+__cmd_runtime () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __runtime ${_dataset}
+}
+
+__cmd_set () {
+    local _property _name _dataset
+
+    _property=${1}
+    __require_not_empty "${_property}" "Missing arguments!"
+    
+    _name=${2}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __export_props "${@}"
+    __set_jail_prop "${_property}" ${_dataset}
+}
+
+__cmd_show () {
+    local _property
+
+    _property=${1}
+    __require_not_empty "${_property}" "Missing property name!"
+    __require_single_word "${_property}" "Invalid property name!"
+
+    __show ${_property}
+}
+
+__cmd_snaplist () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __snaplist ${_dataset}
+}
+
+__cmd_snapremove () {
+    local _name _snapshot _dataset
+
+    _name=${1%%@*}
+    __check_name "${_name}"
+
+    _snapshot=${1#${_name}}
+    __require_not_empty "${_snapshot%@}" "Missing snapshot name!"
+    __require_single_word "${_snapshot%@}" "Invalid snapshot name: ${_snapshot}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __snapremove ${_dataset} ${_snapshot%@}
+}
+
+__cmd_snapshot () {
+    local _name _snapshot _dataset
+
+    _name=${1%%@*}
+    __check_name "${_name}"
+
+    _snapshot=${1#${_name}}
+    __require_single_word "${_snapshot%@}" "Invalid snapshot name: ${_snapshot}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    __snapshot ${_dataset} ${_snapshot%@}
+}
+
+__cmd_start () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    __start_jail ${_dataset}
+}
+
+__cmd_stop () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    __stop_jail ${_dataset}
+}
+
+__cmd_uncap () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    __rctl_uncap ${_dataset}
+}
+
+__cmd_update () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+    
+    __update ${_dataset}
+}
+
+__cmd_upgrade () {
+    local _name _dataset _release
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
+
+    if [ "${2%%=*}" == "release" ] ; then
+        _release=${2#*=}
+        __require_not_empty "${_release}" "Missing release!"
+        __require_single_word "${_release}" "Invalid release: ${_release}"
+        export release=${_release}
+    fi
+    
+    __upgrade ${_dataset}
 }

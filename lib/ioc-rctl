@@ -1,16 +1,13 @@
 #!/bin/sh
 
 __rctl_limits () {
-    local _failed _name _dataset _fulluuid _rlimits _prop _value _limit _action
+    local __dataset _fulluuid _rlimits _failed _prop _value _limit _action
     
-    _name=${1}
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-    _rlimits=$(__get_dataset_ioc_prop rlimits ${_dataset})
 
+    _rlimits=$(__get_dataset_ioc_prop rlimits ${_dataset})
     if [ "${_rlimits}" == "on" ] ; then
         echo -n "  + Applying resource limits"
         _failed=0
@@ -42,38 +39,38 @@ __rctl_limits () {
 }
 
 __rctl_list () {
-    local _name _fulluuid _jid _limits _i _limit _cpuset
+    local _dataset _fulluuid _jid _limits _i _limit _cpuset
     
-    _name=${1}
+    _dataset=${1}
 
-    if [ -z "${_name}" ] ; then
-        echo "* All active limits:"
-        rctl | grep jail
-    else
-        __check_name "${_name}"
-        _fulluuid=$(__get_jail_prop host_hostuuid ${_name})
-        _jid=$(jls -j ioc-${_fulluuid} jid)
-        _limits=$(rctl -h | grep ${_fulluuid})
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _jid=$(jls -j ioc-${_fulluuid} jid)
+    _limits=$(rctl -h | grep ${_fulluuid})
 
-        echo "* Active limits for jail: ${_fulluuid}"
+    echo "* Active limits for jail: ${_fulluuid}"
 
-        for _i in ${_limits} ; do
-            _limit=${_i#*:*:}
-            echo "  - ${_limit}"
-        done
+    for _i in ${_limits} ; do
+        _limit=${_i#*:*:}
+        echo "  - ${_limit}"
+    done
 
-        if [ -n "${_jid}" ] ; then
-            _cpuset=$(cpuset -g -j ${_jid} | cut -f2 -d:)
-            echo "* CPU set: ${_cpuset}"
-        fi
+    if [ -n "${_jid}" ] ; then
+        _cpuset=$(cpuset -g -j ${_jid} | cut -f2 -d:)
+        echo "* CPU set: ${_cpuset}"
     fi
 }
 
+__rctl_list_all () {
+    echo "* All active limits:"
+    rctl | grep jail
+}
+
 __rctl_uncap () {
-    local _name _fulluuid
+    local _dataset _fulluuid
     
-    _name=${1}
-    _fulluuid=$(__get_jail_prop host_hostuuid ${_name})
+    _dataset=${1}
+
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
 
     echo "  Releasing resource limits.."
     rctl -r jail:ioc-${_fulluuid}
@@ -82,20 +79,15 @@ __rctl_uncap () {
 }
 
 __rctl_inuse () {
-    local _name _dataset _fulluuid
-    
-    _name=${1}
+    local _dataset _fulluuid
 
-    if [ -z "${_name}" ] ; then
-        __rctl_inuse_all
-    else
-        __check_name "${_name}"
-        _fulluuid=$(__get_jail_prop host_hostuuid ${_name})
+    _dataset=${1}
 
-        echo "Consumed resources:"
-        echo "-------------------"
-        rctl -hu jail:ioc-${_fulluuid}
-    fi
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+
+    echo "Consumed resources:"
+    echo "-------------------"
+    rctl -hu jail:ioc-${_fulluuid}
 }
 
 __rctl_inuse_all () {

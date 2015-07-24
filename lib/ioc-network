@@ -6,6 +6,7 @@ __get_next_mac () {
 
     _mac_base=$(echo "${1}" | tr '[a-z]' '[A-Z]')
     _mac_offset=$(echo "obase=16; ${2}" | bc)
+
     _calc_mac=$(echo "obase=16; ibase=16; ${_mac_base} + ${_mac_offset}" | bc)
     _mac_postfix=$(echo "${_calc_mac}" | awk '{ print substr($0, length($0)-5, length($0)) }')
     _mac="${mac_prefix}${_mac_postfix}"
@@ -31,7 +32,7 @@ __generate_mac () {
 
 # Expects input: _nic _mac_offset _epair_leg _uuid
 # outputs a single mac address
-# Example: __validate_mac ${_nic} ${_mac_offset} a ${_uuid}
+# Example: __validate_mac ${_nic} ${_mac_offset} a ${_dataset}
 __validate_mac () {
     local _nic _mac_offset _epair_leg _dataset _mac _return
 
@@ -39,6 +40,7 @@ __validate_mac () {
     _mac_offset=${2}
     _epair_leg=${3}
     _dataset=${4}
+
     _mac=$(__get_dataset_ioc_prop ${_nic}_mac ${_dataset})
 
     if [ "${_mac}" == "none" ] ; then
@@ -75,6 +77,7 @@ __start_networking () {
     local _mac_epair_a _mac_epair_b _addrs _iface _ip
 
     _dataset=${1}
+
     _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _jid=$(jls -j ioc-${_uuid} jid)
     _ip4=$(__get_dataset_ioc_prop ip4_addr ${_dataset})

@@ -1,36 +1,24 @@
 #!/bin/sh
 
 __snapshot () {
-    local _name _snapshot _dataset _date
-    
-    _name=${1%%@*}
-    __check_name "${_name}"
-    
-    _snapshot=${1#*@}
+    local _dataset _snapshot _date
 
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
+    _snapshot=${2}
 
     if [ -z "${_snapshot}" ] ; then
         _date=$(date "+%F_%T")
-        zfs snapshot -r ${_dataset}@ioc-${_date}
-    else
-        zfs snapshot -r ${_dataset}@${_snapshot}
+        _snapshot="ioc-${_date}"
     fi
+
+    zfs snapshot -r ${_dataset}@${_snapshot}
 }
 
 __snapremove () {
-    local _name _snapshot _dataset _snapshots _snap
+    local _dataset _snapshot _snapshots _snap
 
-    _name=${1%%@*}
-    __check_name "${_name}"
-    
-    _snapshot=${1#*@}
-    __require_not_empty "${_snapshot}" "Missing snapshot name!"
-    __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot}"
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
+    _snapshot=${2}
 
     if [ ${_snapshot} == "ALL" ] ; then
         _snapshots=$(zfs list -d1 -Hrt snapshot -o name ${_dataset})
@@ -44,15 +32,10 @@ __snapremove () {
 }
 
 __snaplist () {
-    local _name _dataset _fulluuid _snapshots
-    local _snap _snapshot _creation _used _referenced
+    local _dataset _snapshots _snap _snapshot _creation _used _referenced
 
-    _name=${1}
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
 
-    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _snapshots=$(zfs list -Hrt snapshot -d1 -o name ${_dataset})
 
     printf "%-36s  %-21s  %s   %s\n" "NAME" "CREATED" "RSIZE" "USED"
@@ -69,33 +52,22 @@ __snaplist () {
 }
 
 __rollback () {
-    local _name _snapshot _dataset _fs_list _fs
-    
-    _name=${1%%@*}
-    __check_name "${_name}"
-    
-    _snapshot=${1#*@}
-    __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot}"
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    local _dataset _snapshot _fs_list _fs
 
-    if [ -n "${_snapshot}" ] ; then
-        _fs_list=$(zfs list -rHo name ${_dataset})
-        for _fs in ${_fs_list} ; do
-            echo "* Rolling back to ${_fs}@${_snapshot}"
-            zfs rollback -r ${_fs}@${_snapshot}
-        done
-    fi
+    _dataset=${1}
+    _snapshot=${2}
+    
+    _fs_list=$(zfs list -rHo name ${_dataset})
+    for _fs in ${_fs_list} ; do
+        echo "* Rolling back to ${_fs}@${_snapshot}"
+        zfs rollback -r ${_fs}@${_snapshot}
+    done
 }
 
 __promote () {
-    local _name _dataset _fs_list _fs _origin
+    local _dataset _fs_list _fs _origin
     
-    _name=${1}
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
     
     _fs_list=$(zfs list -rHo name ${_dataset})
 

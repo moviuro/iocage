@@ -40,8 +40,9 @@ __print_defaults () {
 __get_default_prop () {
     local _property _value
 
-    _property=${1} # checked in __get_jail_prop
-    _value=$(__get_jail_prop "${_property}" default)
+    _property=${1}
+    
+    _value=$(__get_jail_prop "${_property}" ${pool}/iocage/.defaults)
 
     if [ "${_value}" != '-' ] ; then
         echo "${_value}"
@@ -59,7 +60,7 @@ __find_jail () {
 
     if [ ${_name} == "default" ] ; then
         echo "${pool}/iocage/.defaults"
-        exit 0
+        return 0
     fi
     
     _jails=$(zfs list -rHo name ${pool}/iocage/jails \
@@ -69,6 +70,7 @@ __find_jail () {
         for _jail in ${_jails} ; do
             echo ${_jail}
         done
+        return 0
     fi
     
     _jlist=""
@@ -90,9 +92,7 @@ __find_jail () {
         fi
     done
 
-    if [ ${_count} -eq 0 ] ; then
-        exit 0
-    elif [ ${_count} -eq 1 ] ; then
+    if [ ${_count} -eq 1 ] ; then
         echo ${_jlist}
     elif [ ${_count} -gt 1 ] ; then
         echo "multiple"
@@ -241,18 +241,12 @@ __find_mypool () {
 
 # Get jail properties
 __get_jail_prop () {
-    local _found _property _name _dataset _CONF _prop _value
+    local _property _dataset _found _CONF _prop _value
+
+    _property=${1}
+    _dataset=${2}
 
     _found=0
-    _property=${1}
-    __require_not_empty "${_property}" "Missing property!"
-    __require_single_word "${_property}" "Invalid property: ${_property}"
-
-    _name=${2}
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
-
     _CONF="${CONF_NET}
            ${CONF_JAIL}
            ${CONF_RCTL}
@@ -316,15 +310,13 @@ __get_dataset_ioc_prop () {
 }
 
 __runtime () {
-    local _name _dataset _fulluuid _params _param
+    local _dataset _fulluuid _params _param
 
-    _name=${1}
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
     
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
 
+    # this all seems a bit silly...
     _params=$(jls -nj ioc-${_fulluuid})
     __require_not_empty "${_params}" "Jail ${_fulluuid} is not up..."
 
@@ -336,16 +328,17 @@ __runtime () {
 # search for executable prestart|poststart|prestop|poststop in jail_dir first,
 # else use jail exec_<type> property unchanged
 __findscript () {
-    local _name _type _mountpoint
+    local _dataset _type _mountpoint
     
-    _name=${1}
+    _dataset=${1}
     _type=${2}
-    _mountpoint=$(__get_jail_prop mountpoint ${_name})
+
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
     if [ -x "${_mountpoint}/${_type}" ]; then
         echo "${_mountpoint}/${_type}"
     else
-        echo $(__get_jail_prop exec_${_type} ${_name})
+        echo $(__get_dataset_ioc_prop exec_${_type} ${_dataset})
     fi
 }
 

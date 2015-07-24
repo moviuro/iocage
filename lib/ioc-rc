@@ -1,43 +1,30 @@
 #!/bin/sh
 
 __start_jail () {
-    local _name _dataset _fulluuid _jail_type _tag _jail_hostid _mountpoint
-    local _template _cpuset _procfs _vnet _nics _i _nic _bridge
-    local _jzfs _jzfs_dataset _jid
+    local _dataset _fulluuid _template _jail_type _nics _i _nic _bridge
+    local _jail_hostid _mountpoint _procfs _jzfs _jzfs_dataset
+    local _tag _vnet _cpuset
     
-    _name=${1}
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-
-    __hack88_mount ${_fulluuid}
-
-    _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
-    _tag=$(__get_dataset_ioc_prop tag ${_dataset})
-    _jail_hostid=$(__get_dataset_ioc_prop hostid ${_dataset})
-    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-    _template=$(__get_dataset_ioc_prop template ${_dataset})
-    _cpuset=$(__get_dataset_ioc_prop cpuset ${_dataset})
-    _procfs=$(__get_dataset_ioc_prop mount_procfs ${_dataset})
-    _vnet=$(__get_dataset_ioc_prop vnet ${_dataset})
-    _nics=$(__get_dataset_ioc_prop interfaces ${_dataset} | tr ',' ' ')
-
     if __is_running ${_fulluuid} ; then
         echo "* ${_fulluuid}: is already up"
         exit 1
     fi
 
-    if [ "${_jail_type}" == "basejail" ] ; then
-        # Re-clone required filesystems
-        __reclone_basejail ${_dataset}
-    fi
-
+    _template=$(__get_dataset_ioc_prop template ${_dataset})
     if [ "${_template}" == "yes" ] ; then
         return
     fi
 
+    _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
+    if [ "${_jail_type}" == "basejail" ] ; then
+        # Re-clone required filesystems
+        __reclone_basejail ${_dataset}
+    fi
+    
+    _nics=$(__get_dataset_ioc_prop interfaces ${_dataset} | tr ',' ' ')
     for _i in ${_nics} ; do
         _nic=${_i%%:*}
         _bridge=${_i#*:}
@@ -50,6 +37,7 @@ __start_jail () {
         fi
     done
 
+    _jail_hostid=$(__get_dataset_ioc_prop hostid ${_dataset})
     if [ "${_jail_hostid}" != "${hostid}" ] ; then
         echo "ERROR: hostid mismatch, start failed!"
         echo "    jail hostid: ${_jail_hostid}"
@@ -57,20 +45,27 @@ __start_jail () {
         exit 1
     fi
 
+    __hack88_mount ${_dataset}
+
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+
+    _procfs=$(__get_dataset_ioc_prop mount_procfs ${_dataset})
     if [ "${_procfs}" -eq 1 ] ; then
         mount -t procfs proc ${_mountpoint}/root/proc
     fi
 
     _jzfs=$(__get_dataset_ioc_prop jail_zfs ${_dataset})
-    _jzfs_dataset=$(__get_dataset_ioc_prop jail_zfs_dataset ${_dataset})
-
     if [ "${_jzfs}" == "on" ] ; then
+        _jzfs_dataset=$(__get_dataset_ioc_prop jail_zfs_dataset ${_dataset})
         __set_dataset_ioc_prop allow_mount=1 ${_dataset}
         __set_dataset_ioc_prop enforce_statfs=1 ${_dataset}
         __set_dataset_ioc_prop allow_mount_zfs=1 ${_dataset}
         __set_dataset_zfs_prop jailed=on ${pool}/${_jzfs_dataset}
     fi
 
+    _tag=$(__get_dataset_ioc_prop tag ${_dataset})
+
+    _vnet=$(__get_dataset_ioc_prop vnet ${_dataset})
     if [ "${_vnet}" == "on" ] || [ "${_vnet}" == "-" ] ; then
         if [ -n $(sysctl -qn kern.features.vimage) ] ; then
             echo "* Starting ${_fulluuid} (${_tag})"
@@ -107,8 +102,9 @@ __start_jail () {
 
     cd ${_mountpoint}/root/dev && ln -s ../var/run/log log
 
-    __rctl_limits ${_fulluuid}
+    __rctl_limits ${_dataset}
 
+    _cpuset=$(__get_dataset_ioc_prop cpuset ${_dataset})
     if [ "${_cpuset}" != "off" ] ; then
         echo -n "  + Appliyng CPU affinity"
         _jid=$(jls -j ioc-${_fulluuid} jid)
@@ -124,7 +120,7 @@ __start_jail () {
         zfs jail ioc-${_fulluuid} ${pool}/${_jzfs_dataset}
     fi
 
-    __resolv_conf ${_fulluuid} > ${_mountpoint}/root/etc/resolv.conf
+    __resolv_conf ${_dataset} > ${_mountpoint}/root/etc/resolv.conf
 
     echo -n "  + Starting services"
     jexec ioc-${_fulluuid} $(__get_dataset_ioc_prop exec_start ${_dataset}) \
@@ -176,9 +172,9 @@ __vnet_start () {
          allow.mount.zfs="$(__get_dataset_ioc_prop allow_mount_zfs ${_dataset})" \
          allow.quotas="$(__get_dataset_ioc_prop allow_quotas ${_dataset})" \
          allow.socket_af="$(__get_dataset_ioc_prop allow_socket_af ${_dataset})" \
-         exec.prestart="$(__findscript ${_uuid} prestart)" \
-         exec.poststart="$(__findscript ${_uuid} poststart)" \
-         exec.prestop="$(__findscript ${_uuid} prestop)" \
+         exec.prestart="$(__findscript ${_dataset} prestart)" \
+         exec.poststart="$(__findscript ${_dataset} poststart)" \
+         exec.prestop="$(__findscript ${_dataset} prestop)" \
          exec.stop="$(__get_dataset_ioc_prop exec_stop ${_dataset})" \
          exec.clean="$(__get_dataset_ioc_prop exec_clean ${_dataset})" \
          exec.timeout="$(__get_dataset_ioc_prop exec_timeout ${_dataset})" \
@@ -261,9 +257,9 @@ __legacy_start () {
              allow.mount.zfs="$(__get_dataset_ioc_prop allow_mount_zfs ${_dataset})" \
              allow.quotas="$(__get_dataset_ioc_prop allow_quotas ${_dataset})" \
              allow.socket_af="$(__get_dataset_ioc_prop allow_socket_af ${_dataset})" \
-             exec.prestart="$(__findscript ${_uuid} prestart)" \
-             exec.poststart="$(__findscript ${_uuid} poststart)" \
-             exec.prestop="$(__findscript ${_uuid} prestop)" \
+             exec.prestart="$(__findscript ${_dataset} prestart)" \
+             exec.poststart="$(__findscript ${_dataset} poststart)" \
+             exec.prestop="$(__findscript ${_dataset} prestop)" \
              exec.stop="$(__get_dataset_ioc_prop exec_stop ${_dataset})" \
              exec.clean="$(__get_dataset_ioc_prop exec_clean ${_dataset})" \
              exec.timeout="$(__get_dataset_ioc_prop exec_timeout ${_dataset})" \
@@ -299,9 +295,9 @@ __legacy_start () {
              allow.mount.zfs="$(__get_dataset_ioc_prop allow_mount_zfs ${_dataset})" \
              allow.quotas="$(__get_dataset_ioc_prop allow_quotas ${_dataset})" \
              allow.socket_af="$(__get_dataset_ioc_prop allow_socket_af ${_dataset})" \
-             exec.prestart="$(__findscript ${_uuid} prestart)" \
-             exec.poststart="$(__findscript ${_uuid} poststart)" \
-             exec.prestop="$(__findscript ${_uuid} prestop)" \
+             exec.prestart="$(__findscript ${_dataset} prestart)" \
+             exec.poststart="$(__findscript ${_dataset} poststart)" \
+             exec.prestop="$(__findscript ${_dataset} prestop)" \
              exec.stop="$(__get_dataset_ioc_prop exec_stop ${_dataset})" \
              exec.clean="$(__get_dataset_ioc_prop exec_clean ${_dataset})" \
              exec.timeout="$(__get_dataset_ioc_prop exec_timeout ${_dataset})" \
@@ -316,28 +312,20 @@ __legacy_start () {
 }
 
 __stop_jail () {
-    local _name _dataset _fulluuid _mountpoint _tag
-    local _exec_prestop _exec_stop _exec_poststop
-    local _vnet _ip4 _rlimits
+    local _dataset _fulluuid _tag _exec_prestop _exec_stop _vnet _ip4
+    local _exec_poststop _mountpoint _rlimits
 
-    _name=${1}
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-    _tag=$(__get_dataset_ioc_prop tag ${_dataset})
-    _exec_prestop=$(__findscript ${_fulluuid} prestop)
-    _exec_stop=$(__get_dataset_ioc_prop exec_stop ${_dataset})
-    _exec_poststop=$(__findscript ${_fulluuid} poststop)
-    _vnet=$(__get_dataset_ioc_prop vnet ${_dataset})
-    _ip4=$(__get_dataset_ioc_prop ip4 ${_dataset})
 
     if ! __is_running ${_fulluuid} ; then
         echo "* ${_fulluuid}: is already down"
         exit 1
     fi
+
+    _tag=$(__get_dataset_ioc_prop tag ${_dataset})
+    _exec_prestop=$(__findscript ${_dataset} prestop)
 
     echo "* Stopping ${_fulluuid} (${_tag})"
 
@@ -349,6 +337,8 @@ __stop_jail () {
         echo "     FAILED"
     fi
 
+    _exec_stop=$(__get_dataset_ioc_prop exec_stop ${_dataset})
+
     echo -n "  + Stopping services"
     jexec ioc-${_fulluuid} ${_exec_stop} >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     if [ ${?} -eq 0 ] ; then
@@ -356,6 +346,9 @@ __stop_jail () {
     else
         echo "    FAILED"
     fi
+
+    _vnet=$(__get_dataset_ioc_prop vnet ${_dataset})
+    _ip4=$(__get_dataset_ioc_prop ip4 ${_dataset})
 
     if [ "${_vnet}" == "on" ] ; then
         echo -n "  + Tearing down VNET"
@@ -381,6 +374,8 @@ __stop_jail () {
         echo "FAILED"
     fi
 
+    _exec_poststop=$(__findscript ${_dataset} poststop)
+
     echo -n "  + Running post-stop"
     eval "${_exec_poststop}"
     if [ ${?} -eq 0 ] ; then
@@ -388,6 +383,8 @@ __stop_jail () {
     else
         echo "    FAILED"
     fi
+
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
     umount -afvF ${_mountpoint}/fstab > /dev/null 2>&1
     umount ${_mountpoint}/root/dev/fd > /dev/null 2>&1
@@ -408,12 +405,9 @@ __stop_jail () {
 
 # Soft restart
 __restart_jail () {
-    local _name _dataset _fulluuid _exec_stop _exec_start _jid _tag _date
+    local _dataset _fulluuid _exec_stop _exec_start _jid _tag _date
     
-    _name=${1}
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
     
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _exec_stop=$(__get_dataset_ioc_prop exec_stop ${_dataset})
@@ -435,8 +429,8 @@ __restart_jail () {
 }
 
 __rc_jails () {
-    local _action _jails _boot_list _jail _boot _priority _uuid
-    local _boot_order _previous_priority _i _shutdown_order
+    local _action _jails _boot_list _jail _boot _priority _previous_priority
+    local _boot_order _i _dataset _uuid _shutdown_order
 
     _action=${1}
     _jails=$(__find_jail ALL)
@@ -447,9 +441,8 @@ __rc_jails () {
 
         if [ "${_boot}" == "on" ] ; then
             _priority=$(__get_dataset_ioc_prop priority ${_jail})
-            _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
             _boot_list="${_boot_list}
-                        ${_priority},${_uuid}"
+                        ${_priority},${_jail}"
         fi
     done
 
@@ -465,14 +458,15 @@ __rc_jails () {
 
         for _i in ${_boot_order} ; do
             _priority=${_i%%,*}
-            _uuid=${_i#*,}
+            _dataset=${_i#*,}
+            _uuid=${_dataset##*/}
 
             if [ ${_priority} -ne ${_previous_priority} ] ; then
                 wait
             fi
 
             if ! __is_running ${_uuid} ; then
-                __start_jail ${_uuid} &
+                __start_jail ${_dataset} &
             fi
 
             _previous_priority=${_priority}
@@ -485,14 +479,15 @@ __rc_jails () {
 
         for _i in ${_shutdown_order} ; do
             _priority=${_i%%,*}
-            _uuid=${_i#*,}
+            _dataset=${_i#*,}
+            _uuid=${_dataset##*/}
 
             if [ ${_priority} -ne ${_previous_priority} ] ; then
                 wait
             fi
 
             if __is_running ${_uuid} ; then
-                __stop_jail ${_uuid} &
+                __stop_jail ${_dataset} &
             fi
 
             _previous_priority=${_priority}

@@ -38,28 +38,28 @@ __configure_jail () {
                 case "${vnet0_mac}" in
                     "-")
                         vnet0_mac="none"
-                    ;;
+                        ;;
                 esac
                 _value=${vnet0_mac}
             elif [ ${_prop_name} == "vnet1_mac" ] ; then
                 case "${vnet1_mac}" in
                     "-")
                         vnet1_mac="none"
-                    ;;
+                        ;;
                 esac
                 _value=${vnet1_mac}
             elif [ ${_prop_name} = "vnet2_mac" ] ; then
                 case "${_vnet2_mac}" in
                     "-")
                         vnet2_mac="none"
-                    ;;
+                        ;;
                 esac
                 _value=${vnet2_mac}
             elif [ ${_prop_name} = "vnet3_mac" ] ; then
                 case "${vnet3_mac}" in
                     "-")
                         vnet3_mac="none"
-                    ;;
+                        ;;
                 esac
                 _value=${vnet3_mac}
             else
@@ -85,7 +85,7 @@ __configure_jail () {
         if [ -n "${_prop}" ] && [ "${_prop}" != "readonly" ] ; then
             # find saved default value if any for the property
             if [ "${_default_value}" != "none" ] &&
-               [ "${_default_value}" != "${_prop}" ] ; then
+                   [ "${_default_value}" != "${_prop}" ] ; then
                 _value=${_default_value}
             else
                 _value=${_prop}
@@ -102,7 +102,7 @@ __configure_jail () {
 }
 
 __jail_rc_conf () {
-cat << EOT
+    cat << EOT
 
 cron_flags="${cron_flags} -J 15"
 
@@ -123,18 +123,22 @@ EOT
 # This is mostly for pkg autoinstall
 # expects fulluuid to be passed in as $1
 __resolv_conf () {
-    local _name _resolver _resolver_default _fulluuid
+    local _dataset _resolver _resolver_default
 
-    _fulluuid=${1}
-    _default_resolver=$(__get_default_prop "resolver")
-    _resolver=$(__get_jail_prop resolver "${_fulluuid}")
+    _dataset=${1}
+    
+    _resolver=$(__get_dataset_ioc_prop resolver ${_dataset})
 
     if [ "${_resolver}" != "none" ] ; then
         echo "${_resolver}" | tr \; \\n
-    elif [ "${_resolver}" == "none" ] && [ "${_default_resolver}" != "none" ] ; then
-        echo "${_default_resolver}" | tr \; \\n
     else
-        cat /etc/resolv.conf
+        _default_resolver=$(__get_default_prop "resolver")
+
+        if [ "${_default_resolver}" != "none" ] ; then
+            echo "${_default_resolver}" | tr \; \\n
+        else
+            cat /etc/resolv.conf
+        fi
     fi
 }
 
@@ -152,30 +156,9 @@ __pkg_install () {
 }
 
 __reset_jail_props () {
-    local _name _dataset _answer
+    local _dataset
 
-    _name=${1}
-
-    if [ ${_name} == "ALL" ] ; then
-        echo " "
-        echo "  WARNING: This will reset ALL jails!"
-        echo " "
-        echo -n "  Are you sure? Y[n]: "
-        read _answer
-        if [ "${_answer}" == "Y" ] || [ "${_answer}" == "y" ] ; then
-            echo "  Resetting all jails."
-
-            __reset_jail_props_all
-
-            exit 0
-        else
-            echo "  Command not confirmed.  No action taken."
-            exit 1
-        fi
-    fi
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
 
     # Cache properties to set again later
     # (beware, globals...)
@@ -194,12 +177,11 @@ __reset_jail_props () {
 }
 
 __reset_jail_props_all () {
-    local _jails _jail _name
+    local _jails _jail
 
     _jails=$(__find_jail ALL)
 
     for _jail in ${_jails} ; do
-        _name=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
-       __reset_jail_props ${_name}
+       __reset_jail_props ${_jail}
     done
 }

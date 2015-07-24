@@ -243,15 +243,10 @@ __check_dataset_all () {
 
 # Set properties -------------------------------------------------------
 __set_jail_prop () {
-    local _property _name _dataset _pname _pval _CONF _prop
+    local _property _dataset _pname _pval _CONF _prop
 
     _property=${1}
-    __require_not_empty "${_property}" "Missing property!"
-
-    _name=${2}
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${2}
     
     _pname=${_property%%=*}
     __require_not_empty "${_pname}" "Set failed, incorrect property syntax!"
@@ -307,19 +302,13 @@ __set_dataset_ioc_prop () {
 }
 
 __console () {
-    local _name _dataset _fulluuid _login_flags _jexec _exec_fib
+    local _dataset _fulluuid _login_flags _jexec _exec_fib
 
-    _name=${1}
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _login_flags=$(__get_dataset_ioc_prop login_flags ${_dataset})
-
     _exec_fib=$(__get_dataset_ioc_prop exec_fib ${_dataset})
-    __require_not_empty "${_exec_fib}" "Missing value for exec_fib property!"
-    __require_single_word "${_exec_fib}" "Invalid value for exec_fib property: ${_exec_fib}"
 
     if [ ${_exec_fib} -ne 0 ] ; then
         _jexec="setfib ${_exec_fib} jexec"
@@ -331,11 +320,11 @@ __console () {
 }
 
 __exec () {
-    local _jexecopts _opt _name _jails _jail _fulluuid _dataset
-    local _jexec _exec_fib
+    local _jexecopts _opt _dataset _fulluuid _exec_fib _jexec
 
-    _jexecopts=
-
+    OPTIND=1
+    _jexecopts=""
+    
     # check for -U or -u to pass to jexec
     while getopts u:U: _opt "${@}"; do
         case "${_opt}" in
@@ -343,30 +332,13 @@ __exec () {
             ?)    __fatal_error "Invalid exec option: ${_opt}";;
         esac
     done
-    shift $(expr ${OPTIND} - 1)
+    shift $((OPTIND - 1))
 
-    _name=${1}
+    _dataset=${1}
     shift
-
-    if [ ${_name} == "ALL" ]; then
-        _jails=$(__find_jail ALL)
-
-        for _jail in ${_jails} ; do
-            _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
-            jexec ${_jexecopts} ioc-${_fulluuid} "${@}"
-        done
-
-        exit 0
-    fi
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
     
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-
     _exec_fib=$(__get_dataset_ioc_prop exec_fib ${_dataset})
-    __require_not_empty "${_exec_fib}" "Missing value for exec_fib property!"
-    __require_single_word "${_exec_fib}" "Invalid value for exec_fib property: ${_exec_fib}"
 
     if [ ${_exec_fib} -ne 0 ] ; then
         _jexec="setfib ${_exec_fib} jexec"
@@ -377,27 +349,43 @@ __exec () {
     ${_jexec} ${_jexecopts} ioc-${_fulluuid} "${@}"
 }
 
+__exec_all () {
+    local _jexecopts _opt _jails _jail
+
+    OPTIND=1
+    _jexecopts=""
+
+    # check for -U or -u to pass to jexec
+    while getopts u:U: _opt "${@}"; do
+        case "${_opt}" in
+            [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}";;
+            ?)    __fatal_error "Invalid exec option: ${_opt}";;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    _jails=$(__find_jail ALL)
+
+    for _jail in ${_jails} ; do
+        __exec ${_jexecopts} ${_jail} "${@}"
+    done
+}
+
 __chroot () {
-    local _name _dataset _fulluuid _mountpoint _command
+    local _dataset _mountpoint
 
-    _name=${1}
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
-
-    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _dataset=${1}
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
-    _command=${2}
+    shift
 
-    chroot "${_mountpoint}/root" ${_command}
+    chroot ${_mountpoint}/root "${@}"
 }
 
 # Fetch release and prepare base ZFS filesystems -----------------------
 __fetch_release () {
-    local _default_rel _answer _match _rel _file
+    local _match _answer _rel _file
 
-    _default_rel=$(uname -r | cut -f 1,2 -d'-')
     _match=0
 
     if [ -z "${iocset_release}" ] ; then

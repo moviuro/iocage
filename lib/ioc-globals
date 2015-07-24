@@ -95,6 +95,10 @@ nshm="off"
 shmsize="off"
 wallclock="off"
 
+# Supported releases
+supported_releases="10.1-RELEASE
+                     9.3-RELEASE"
+
 # Custom properties
 iocroot="/iocage"
 tag=$(date "+%F@%T")
@@ -105,7 +109,7 @@ owner="root"
 priority=99
 last_started="none"
 type="jail"
-release=$(uname -r|cut -f 1,2 -d'-')
+release=$(echo "${supported_releases}" | head -n1)
 hostid=$(cat /etc/hostid)
 jail_zfs="off"
 jail_zfs_dataset="iocage/jails/${uuid}/root/data"
@@ -131,10 +135,6 @@ sync_tgt_zpool="none"
 # FTP variables
 ftphost="ftp.freebsd.org"
 ftpfiles="base.txz doc.txz lib32.txz src.txz"
-
-# Supported releases
-supported_releases="10.1-RELEASE
-                     9.3-RELEASE"
 
 # Resource limits
 CONF_RCTL="memoryuse

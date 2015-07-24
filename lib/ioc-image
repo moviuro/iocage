@@ -1,22 +1,20 @@
 #!/bin/sh
 
 __record () {
-    local _action _name _dataset _fulluuid _mountpoint _union_mount
+    local _action _dataset _fulluuid _mountpoint _union_mount
 
     _action=${1}
-    _name=${2}
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${2}
     
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-    _union_mount=$(mount -t unionfs | grep -c ${_fulluuid})
 
     [ -d "${_mountpoint}/recorded" ] ||
         mkdir "${_mountpoint}/recorded"
 
     if [ ${_action} == "start" ] ; then
+        _union_mount=$(mount -t unionfs | grep -c ${_fulluuid})
+
         echo "* Recording to: ${_mountpoint}/recorded"
 
         if [ ${_union_mount} -lt 1 ] ; then
@@ -42,12 +40,9 @@ __record () {
 __package () {
     # create package from recorded changes
     # sha256 too
-    local _name _dataset _fulluuid _mountpoint
+    local _dataset _fulluuid _mountpoint
 
-    _name=${1}
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
     
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
@@ -139,16 +134,11 @@ __import () {
 __export () {
     # Export full jail
     # sha256
-    local _name _dataset _fulluuid _mountpoint
+    local _dataset _fulluuid _mountpoint
 
-    _name=${1}
-    
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    _dataset=${1}
     
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-
     ! __is_running ${_fulluuid} ||
         __fatal_error "${_fulluuid} is running! Stop jail before exporting."
 
@@ -156,10 +146,14 @@ __export () {
         mkdir ${iocroot}/images
 
     echo "* Exporting ${_fulluuid}"
+
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+    
     tar -cvJf "${iocroot}/images/${_fulluuid}.tar.xz" \
         -C "${_mountpoint}/root" . &&
         sha256 -q ${iocroot}/images/${_fulluuid}.tar.xz \
         > ${iocroot}/images/${_fulluuid}.sha256
+
     echo "* Image saved to: ${iocroot}/images/${_fulluuid}.tar.xz"
     echo "* Checksum created: ${iocroot}/images/${_fulluuid}.sha256"
 }

@@ -1356,7 +1356,7 @@ __usage () {
 }
 
 __show () {
-    local _prop _jails _jail _name _value
+    local _prop _jails _jail _uuid _value
     
     _prop=${1}
     _jails=$(__find_jail ALL)
@@ -1365,11 +1365,11 @@ __show () {
         printf "%s\t%s\t%s\n" "UUID" "TAG" "${_prop}"
 
         for _jail in ${_jails} ; do
-            _name=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+            _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
             _tag=$(__get_dataset_ioc_prop tag ${_jail})
-            _value=$(__get_jail_prop ${_prop} ${_name})
+            _value=$(__get_jail_prop ${_prop} ${_jail})
 
-            printf "%s\t%s\t%s\n" "${_name}" "${_tag}" "${_value}"
+            printf "%s\t%s\t%s\n" "${_uuid}" "${_tag}" "${_value}"
         done
     } | column -s $'\t' -t
 }

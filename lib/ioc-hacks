@@ -2,25 +2,27 @@
 
 # truncate mountpoint to work around 88 char mount limit on FreeBSD
 __hack88_mount () {
-    local _fulluuid _shortuuid _mountpoint _mount_len _hack88
+    local _dataset _fulluuid _shortuuid _mountpoint _mount_len _hack88
 
-    _fulluuid=${1}
+    _dataset=${1}
+
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _shortuuid=${_fulluuid%%-*}
-    _mountpoint=$(__get_jail_prop mountpoint ${_fulluuid})
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
     _mount_len=$(echo ${_mountpoint} | awk -F/ '{ print length($4) }')
-    _hack88=$(__get_jail_prop hack88 ${_fulluuid})
+    _hack88=$(__get_dataset_ioc_prop hack88 ${_dataset})
 
     if [ "${_hack88}" -eq 1 ] && [ "${_mount_len}" -eq 36 ] ; then
         echo "  INFO: truncating jail mountpoint"
         zfs umount -f ${iocroot}/jails/${_fulluuid}
-        __set_jail_prop "mountpoint=${iocroot}/jails/${_shortuuid}" ${_fulluuid}
-        zfs list -rH -o name ${pool}${iocroot}/jails/${_fulluuid} | \
-            grep -v "${_fulluuid}/root/data" | xargs -L 1 zfs mount
+        __set_dataset_zfs_prop mountpoint=${iocroot}/jails/${_shortuuid} ${_dataset}
+        zfs list -rH -o name ${_dataset} | \
+            grep -v ${_fulluuid}/root/data | xargs -L 1 zfs mount
     elif [ "${_hack88}" -ne 1 ] && [ "${_mount_len}" -lt 36 ] ; then
         echo "  INFO: restoring jail mountpoint"
         zfs umount -f ${iocroot}/jails/${_shortuuid}
-        __set_jail_prop "mountpoint=${iocroot}/jails/${_fulluuid}" ${_fulluuid}
-        zfs list -rH -o name ${pool}${iocroot}/jails/${_fulluuid} | \
-            grep -v "${_fulluuid}/root/data" | xargs -L 1 zfs mount
+        __set_dataset_zfs_prop mountpoint=${iocroot}/jails/${_fulluuid} ${_dataset}
+        zfs list -rH -o name ${_dataset} | \
+            grep -v ${_fulluuid}/root/data | xargs -L 1 zfs mount
     fi
 }
