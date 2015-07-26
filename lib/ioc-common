@@ -423,7 +423,7 @@ __fetch_release () {
     cd ${iocroot}/download/${release}
     for _file in ${ftpfiles} ; do
         if [ ! -e "${_file}" ] ; then
-            fetch http://${ftphost}${ftpdir}/${_file}
+            fetch ${ftpproto}://${ftphost}${ftpdir}/${_file}
             [ ${?} -eq 0 ] ||
                 __fatal_error "Failed fetching ${_file}..."
         fi
