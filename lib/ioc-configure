@@ -36,8 +36,11 @@ __configure_jail () {
                 _value=${resolver}
             elif [ ${_prop_name} == "ip4_autostart" ] ; then
                 _value=${ip4_autostart}
-            elif [ ${prop_name} == "ip4_autoend" ] ; then
+            elif [ ${_prop_name} == "ip4_autoend" ] ; then
                 _value=${ip4_autoend}
+            elif [ ${_prop_name} == "ip4_addr" ] ; then
+                _value=$(__sub_autoip4 "${_value}") ||
+                    _value=${_prop}
             elif [ ${_prop_name} == "vnet0_mac" ] ; then
                 case "${vnet0_mac}" in
                     "-")
@@ -77,7 +80,7 @@ __configure_jail () {
                 if [ ${_prop_name} == "tag" ] ; then
                     __link_tag ${1}
                 fi
-            elif [ "${1}" == "generate" ] ; then
+            else
                 echo -n "-o org.freebsd.iocage:${_prop_name}=\"${_value}\" "
             fi
         fi
@@ -98,7 +101,7 @@ __configure_jail () {
             if [ "${1}" != "generate" ] ; then
                 echo "** ${_prop_name}=${_value}"
                 __set_dataset_zfs_prop ${_prop_name}="${_value}" ${1}
-            elif [ "${1}" == "generate" ] ; then
+            else
                 echo -n "-o ${_prop_name}=\"${_value}\" "
             fi
         fi

@@ -200,22 +200,14 @@ __legacy_start () {
     _ip4_addr_prop=$(__get_dataset_ioc_prop ip4_addr ${_dataset})
     _ip6_addr_prop=$(__get_dataset_ioc_prop ip6_addr ${_dataset})
 
-    # Check if the user specified they wanted to use an automatic IP4 address
-    echo "${_ip4_addr_prop}" | grep -q "AUTOIP4"
-    if [ ${?} -eq 0 ] ; then
-        _autoip4=$(__get_autoip4)
-        _ip4_addr_prop=$(echo "${_ip4_addr_prop}" | sed "s#AUTOIP4#${_autoip4}/24#")
-        __set_dataset_ioc_prop ip4_addr="${_ip4_addr_prop}" ${_dataset}
-    fi
-
     # Replace DEFAULT with the actual default interface name if needed
     _default_iface=$(netstat -f inet -nrW | awk '/^default/ { print $6 }')
     _ip4_addr=$(__sub_default_iface ${_default_iface} "${_ip4_addr_prop}")
     _ip6_addr=$(__sub_default_iface ${_default_iface} "${_ip6_addr_prop}")
 
+    # this is mostly a temporary workaround for https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=196474
     _ip4=$(__get_dataset_ioc_prop ip4 ${_dataset})
 
-    # this is mostly a temporary workaround for https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=196474
     if [ "${_ip4}" == "inherit" ] ; then
         _ip4="inherit"
         _ip6="inherit"
@@ -355,7 +347,6 @@ __stop_jail () {
     fi
 
     _vnet=$(__get_dataset_ioc_prop vnet ${_dataset})
-    _ip4=$(__get_dataset_ioc_prop ip4 ${_dataset})
 
     if [ "${_vnet}" == "on" ] ; then
         echo -n "  + Tearing down VNET"
@@ -366,9 +357,17 @@ __stop_jail () {
             echo "        FAILED"
         fi
     else
+        _ip4=$(__get_dataset_ioc_prop ip4 ${_dataset})
+
         # don't try to tear down networking if we have "inherit" set
         if [ "${_ip4}" != "inherit" ] ; then
+            echo -n "  + Stopping legacy networking"
             __stop_legacy_networking ${_dataset}
+            if [ ${?} -eq 0 ] ; then
+                echo "        OK"
+            else
+                echo "        FAILED"
+            fi
         fi
     fi
 

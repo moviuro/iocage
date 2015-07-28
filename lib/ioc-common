@@ -304,6 +304,11 @@ __set_jail_prop () {
 
     _pval=${_property#*=}
 
+    if [ ${_pname} == "ip4_addr" ] ; then
+        _pval=$(__sub_autoip4 "${_pval}") ||
+            __fatal_error "Failed to set automatic IPv4 address."
+    fi
+
     _CONF="${CONF_NET}
            ${CONF_JAIL}
            ${CONF_RCTL}
