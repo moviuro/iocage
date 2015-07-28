@@ -189,33 +189,31 @@ __vnet_start () {
 
 # Start a shared IP jail
 __legacy_start () {
-    local _dataset _uuid _mountpoint _ip4_addr _ip6_addr _ip4 _fdescfs _tmpfs
-    local _ip6 _ip4_addr_propline _ip6_addr_propline
+    local _dataset _uuid _mountpoint _ip4_addr_prop _ip6_addr_prop
+    local _autoip4 _default_iface _ip4_addr _ip6_addr _ip4 _ip6
+    local _ip4_addr_propline _ip6_addr_propline _fdescfs _tmpfs
 
     _dataset=${1}
 
     _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-    _ip4_addr=$(__get_dataset_ioc_prop ip4_addr ${_dataset})
-    _ip6_addr=$(__get_dataset_ioc_prop ip6_addr ${_dataset})
+    _ip4_addr_prop=$(__get_dataset_ioc_prop ip4_addr ${_dataset})
+    _ip6_addr_prop=$(__get_dataset_ioc_prop ip6_addr ${_dataset})
+
+    # Check if the user specified they wanted to use an automatic IP4 address
+    echo "${_ip4_addr_prop}" | grep -q "AUTOIP4"
+    if [ ${?} -eq 0 ] ; then
+        _autoip4=$(__get_autoip4)
+        _ip4_addr_prop=$(echo "${_ip4_addr_prop}" | sed "s#AUTOIP4#${_autoip4}/24#")
+        __set_dataset_ioc_prop ip4_addr="${_ip4_addr_prop}" ${_dataset}
+    fi
+
+    # Replace DEFAULT with the actual default interface name if needed
+    _default_iface=$(netstat -f inet -nrW | awk '/^default/ { print $6 }')
+    _ip4_addr=$(__sub_default_iface ${_default_iface} "${_ip4_addr_prop}")
+    _ip6_addr=$(__sub_default_iface ${_default_iface} "${_ip6_addr_prop}")
+
     _ip4=$(__get_dataset_ioc_prop ip4 ${_dataset})
-
-    if [ "$(uname -U)" == "903000" ];
-    then
-      _fdescfs=""
-      _tmpfs=""
-    else
-        _fdescfs="mount.fdescfs=$(__get_dataset_ioc_prop mount_fdescfs ${_dataset})"
-        _tmpfs="allow.mount.tmpfs=$(__get_dataset_ioc_prop allow_mount_tmpfs ${_dataset})"
-    fi
-
-    if [ "${_ip4_addr}" == "none" ] ; then
-        _ip4_addr=""
-    fi
-
-    if [ "${_ip6_addr}" == "none" ] ; then
-        _ip6_addr=""
-    fi
 
     # this is mostly a temporary workaround for https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=196474
     if [ "${_ip4}" == "inherit" ] ; then
@@ -227,6 +225,15 @@ __legacy_start () {
         _ip6=$(__get_dataset_ioc_prop ip6 ${_dataset})
         _ip4_addr_propline="ip4.addr=${_ip4_addr}"
         _ip6_addr_propline="ip6.addr=${_ip6_addr}"
+    fi
+
+    if [ "$(uname -U)" == "903000" ];
+    then
+      _fdescfs=""
+      _tmpfs=""
+    else
+        _fdescfs="mount.fdescfs=$(__get_dataset_ioc_prop mount_fdescfs ${_dataset})"
+        _tmpfs="allow.mount.tmpfs=$(__get_dataset_ioc_prop allow_mount_tmpfs ${_dataset})"
     fi
 
     if [ "${ipv6}" == "on" ] ; then

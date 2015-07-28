@@ -34,6 +34,10 @@ __configure_jail () {
                 _value=${hack88}
             elif [ ${_prop_name} == "resolver" ] ; then
                 _value=${resolver}
+            elif [ ${_prop_name} == "ip4_autostart" ] ; then
+                _value=${ip4_autostart}
+            elif [ ${prop_name} == "ip4_autoend" ] ; then
+                _value=${ip4_autoend}
             elif [ ${_prop_name} == "vnet0_mac" ] ; then
                 case "${vnet0_mac}" in
                     "-")
@@ -172,6 +176,8 @@ __reset_jail_props () {
     hack88=$(__get_dataset_ioc_prop hack88 ${_dataset})
     jail_zfs_dataset=$(__get_dataset_ioc_prop jail_zfs_dataset ${_dataset})
     resolver=$(__get_dataset_ioc_prop resolver ${_dataset})
+    ip4_autostart=$(__get_dataset_ioc_prop ip4_autostart ${_dataset})
+    ip4_autoend=$(__get_dataset_ioc_prop ip4_autoend ${_dataset})
 
     __configure_jail ${_dataset}
 }

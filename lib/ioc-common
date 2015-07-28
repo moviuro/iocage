@@ -86,6 +86,26 @@ __require_name_not_empty () {
     __require_not_empty "${_name}" "${_description}"
 }
 
+# Require that the given name is not "default" -------------------------
+#
+# If the name string is "default", a fatal error occurs, printing a
+# message to stderr and exiting the current shell. Otherwise, nothing
+# happens.
+#
+# This function is for the common pattern of rejecting "default" when
+# used as a jail name for functions that do not support the "default"
+# pattern.
+#
+# ${1}: the UUID or tag, usually "${_name}" by convention
+__require_name_not_default () {
+    local _name _description
+
+    _name=${1}
+    _description="The tag \"default\" is not supported by this command!"
+
+    [ "${_name}" != "default" ] || __fatal_error "${_description}"
+}
+
 # Require that the given name is not "ANY" -----------------------------
 #
 # If the name string is "ANY", a fatal error occurs, printing a message
@@ -193,6 +213,22 @@ __check_name () {
 
     __require_name_not_empty "${_name}"
     __require_name_not_all "${_name}"
+    __require_name_not_default "${_name}"
+    __require_name_single_word "${_name}"
+}
+
+# Check the validity of the given UUID or tag --------------------------
+#
+# default is OK.
+#
+# ${1}: the UUID or tag to check
+__check_name_default () {
+    local _name
+
+    _name=${1}
+
+    __require_name_not_empty "${_name}"
+    __require_name_not_all "${_name}"
     __require_name_single_word "${_name}"
 }
 
@@ -202,6 +238,21 @@ __check_name () {
 #
 # ${1}: the UUID or tag to check
 __check_name_all () {
+    local _name
+
+    _name=${1}
+
+    __require_name_not_empty "${_name}"
+    __require_name_not_default "${_name}"
+    __require_name_single_word "${_name}"
+}
+
+# Check the validity of the given UUID or tag --------------------------
+#
+# ALL/default is OK.
+#
+# ${1}: the UUID or tag to check
+__check_name_all_default () {
     local _name
 
     _name=${1}
