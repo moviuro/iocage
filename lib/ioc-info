@@ -241,12 +241,29 @@ __find_mypool () {
 
 # Get jail properties
 __get_jail_prop () {
-    local _property _dataset _found _CONF _prop _value
+    local _property _dataset _found _uuid _status _CONF _prop _value
 
     _property=${1}
     _dataset=${2}
 
     _found=0
+
+    if [ ${_property} == "status" ] || [ ${_property} == "all" ] ; then
+        _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+        if __is_running ${_uuid} ; then
+            _status="up"
+        else
+            _status="down"
+        fi
+        if [ ${_property} == "all" ] ; then
+            _found=1
+            echo "status:${_status}"
+        else
+            echo ${_status}
+            return
+        fi
+    fi
+
     _CONF="${CONF_NET}
            ${CONF_JAIL}
            ${CONF_RCTL}
@@ -266,13 +283,12 @@ __get_jail_prop () {
             else
                 echo "${_value}"
             fi
-            break
+            return
 
         elif [ ${_property} == "all" ] ; then
             _found=1
             _value=$(__get_dataset_ioc_prop ${_prop} ${_dataset})
             echo "${_prop}:${_value}"
-            break
         fi
     done
 
@@ -282,7 +298,7 @@ __get_jail_prop () {
                 _found=1
                 _value=$(__get_dataset_zfs_prop ${_prop} ${_dataset})
                 echo "${_value}"
-                break
+                return
             fi
         done
     fi
