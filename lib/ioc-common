@@ -5,7 +5,7 @@ __export_props () {
     local _i
     
     for _i in "${@}" ; do
-        if [ "$(echo ${_i} | grep -e ".*=.*")" ] ; then
+        if echo ${_i} | grep -qe ".*=.*" ; then
             export "${_i}"
             export "iocset_${_i}"
         fi

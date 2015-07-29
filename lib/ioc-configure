@@ -39,8 +39,8 @@ __configure_jail () {
             elif [ ${_prop_name} == "ip4_autoend" ] ; then
                 _value=${ip4_autoend}
             elif [ ${_prop_name} == "ip4_addr" ] ; then
-                _value=$(__sub_autoip4 "${_value}") ||
-                    _value=${_prop}
+                _value=$(__sub_autoip4 "${_prop}") ||
+                    __fatal_error "Failed to set automatic IPv4 address."
             elif [ ${_prop_name} == "vnet0_mac" ] ; then
                 case "${vnet0_mac}" in
                     "-")
