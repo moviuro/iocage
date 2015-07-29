@@ -230,10 +230,10 @@ __legacy_start () {
 
     if [ "${ipv6}" == "on" ] ; then
         jail -c \
-             "${_ip4_addr_propline}" \
+             ${_ip4_addr_propline} \
              ip4.saddrsel="$(__get_dataset_ioc_prop ip4_saddrsel ${_dataset})" \
              ip4="${_ip4}" \
-             "${_ip6_addr_propline}" \
+             ${_ip6_addr_propline} \
              ip6.saddrsel="$(__get_dataset_ioc_prop ip6_saddrsel ${_dataset})" \
              ip6="${_ip6}" \
              name="ioc-${_uuid}" \
@@ -271,7 +271,7 @@ __legacy_start () {
              persist
     else
         jail -c \
-             "${_ip4_addr_propline}" \
+             ${_ip4_addr_propline} \
              ip4.saddrsel="$(__get_dataset_ioc_prop ip4_saddrsel ${_dataset})" \
              ip4="${_ip4}" \
              name="ioc-${_uuid}" \
