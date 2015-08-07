@@ -259,28 +259,56 @@ __check_filesystems () {
     fi
 }
 
-# Check the version of iocage this pool is compatible with.
+# Check that all our jails are compatible with this version of iocage.
 #
-# If the version isn't compatible, make it compatible.
-__check_pool_version () {
-    local _ondisk_version
+# If a jail isn't compatible, make it compatible.
+#
+# Version is stored per-jail so that when jails are transferred between
+# different versions of iocage, we can detect and fix missing properties without
+# requiring manual intervention.
+__check_jail_ioc_versions () {
+    local _mismatches _jail _uuid
 
-    _ondisk_version=$(__get_dataset_ioc_prop version ${pool})
+    # This is only slightly complicated because the version string contains
+    # parenthesis which must be escaped. Here's the play-by-play:
+    #
+    # Find the dataset and the iocage version for each jail with a recursive
+    # zfs list and pipe it to our best friend, awk.
+    #
+    # Start awk by setting the variable version="${iocage_version}", then do a
+    # global string substitution in the BEGIN action to escape the parenthesis
+    # around the date in the version string.
+    #
+    # The first line of input to awk will be ${pool}${iocroot}/jails because of
+    # how zfs lists datasets recursively, so we skip that line with FNR > 1.
+    #
+    # If the line doesn't contain our version string, print the first field,
+    # which gives us the dataset with a mismatched version.
+    _mismatches=$(zfs get -Hrd1 -o name,value \
+                      org.freebsd.iocage:iocage_version \
+                      ${pool}${iocroot}/jails \
+                         | awk -v version="${iocage_version}" \
+                               'BEGIN { gsub(/[()]/, "\\\\&", version) }
+                                FNR > 1 && $0 !~ version { print $1 }')
 
-    if [ "${_ondisk_version}" != "${iocage_version}" ] ; then
-        echo -n "Updating properties..." >&2
-        __update_ioc_properties
-        echo "  done." >&2
-    fi
+    for _jail in ${_mismatches} ; do
+        _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+        echo "Updating iocage properties for ${_uuid}" >&2
+        __update_dataset_ioc_properties ${_jail} &
+    done
+
+    wait
 }
 
-# Add missing ioc properties to existing jails.
+# Add missing ioc properties to an existing jail dataset.
 #
 # When iocage is updated and new properties are added, these properties
 # will be missing from existing jails. This function looks for any unset
 # properties and sets them to "none".
-__update_ioc_properties () {
-    local _CONF _jails _jail _prop _value
+__update_dataset_ioc_properties () {
+    local _dataset _CONF _prop _value
+
+    _dataset=${1}
 
     _CONF="${CONF_RCTL}
            ${CONF_NET}
@@ -289,16 +317,12 @@ __update_ioc_properties () {
            ${CONF_SYNC}
            ${CONF_FTP}"
 
-    _jails=$(__find_jail ALL)
-
-    for _jail in ${_jails} ; do
-        for _prop in ${_CONF} ; do
-            _value=$(__get_dataset_ioc_prop ${_prop} ${_jail})
-            if [ "${_value}" == "-" ] ; then
-                __set_dataset_ioc_prop ${_prop}=none ${_jail}
-            fi
-        done
+    for _prop in ${_CONF} ; do
+        _value=$(__get_dataset_ioc_prop ${_prop} ${_dataset})
+        if [ "${_value}" == "-" ] ; then
+            __set_dataset_ioc_prop ${_prop}=none ${_dataset}
+        fi
     done
 
-    __set_dataset_ioc_prop version="${iocage_version}" ${pool}
+    __set_dataset_ioc_prop iocage_version="${iocage_version}" ${_dataset}
 }
