@@ -217,9 +217,9 @@ __find_mypool () {
     _pools=$(zpool list -Ho name)
 
     for _pool in ${_pools} ; do
-        _mypool=$(zpool get -Ho value comment ${_pool})
+        _mypool=$(__get_dataset_ioc_prop active ${_pool})
 
-        if [ "${_mypool}" == "iocage" ] ; then
+        if [ "${_mypool}" == "yes" ] ; then
             _found=1
             break
         fi
@@ -233,7 +233,7 @@ __find_mypool () {
 
         echo "Setting up zpool [${_pool}] for iocage usage..."
         echo "If you wish to change zpool, use 'iocage activate'"
-        zpool set comment=iocage ${_pool}
+        __set_dataset_ioc_prop active=yes ${_pool}
     fi
 
     export pool=${_pool}
@@ -312,7 +312,7 @@ __get_dataset_zfs_prop () {
 
     _prop=${1}
     _dataset=${2}
-    
+
     zfs get -Ho value ${_prop} ${_dataset}
 }
 

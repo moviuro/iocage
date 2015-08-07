@@ -7,7 +7,7 @@ __activate () {
 
     _pool=${1}
 
-   zpool set comment=iocage ${_pool}
+    __set_dataset_ioc_prop active=yes ${_pool}
 }
 
 __create_basejail () {
@@ -257,4 +257,48 @@ __check_filesystems () {
     if [ ${_missing} -gt 0 ] ; then
         zfs mount -a
     fi
+}
+
+# Check the version of iocage this pool is compatible with.
+#
+# If the version isn't compatible, make it compatible.
+__check_pool_version () {
+    local _ondisk_version
+
+    _ondisk_version=$(__get_dataset_ioc_prop version ${pool})
+
+    if [ "${_ondisk_version}" != "${iocage_version}" ] ; then
+        echo -n "Updating properties..." >&2
+        __update_ioc_properties
+        echo "  done." >&2
+    fi
+}
+
+# Add missing ioc properties to existing jails.
+#
+# When iocage is updated and new properties are added, these properties
+# will be missing from existing jails. This function looks for any unset
+# properties and sets them to "none".
+__update_ioc_properties () {
+    local _CONF _jails _jail _prop _value
+
+    _CONF="${CONF_RCTL}
+           ${CONF_NET}
+           ${CONF_JAIL}
+           ${CONF_CUSTOM}
+           ${CONF_SYNC}
+           ${CONF_FTP}"
+
+    _jails=$(__find_jail ALL)
+
+    for _jail in ${_jails} ; do
+        for _prop in ${_CONF} ; do
+            _value=$(__get_dataset_ioc_prop ${_prop} ${_jail})
+            if [ "${_value}" == "-" ] ; then
+                __set_dataset_ioc_prop ${_prop}=none ${_jail}
+            fi
+        done
+    done
+
+    __set_dataset_ioc_prop version="${iocage_version}" ${pool}
 }

@@ -29,8 +29,10 @@ unset LANG
 
 PATH=${PATH}:/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
 
+iocage_version="iocage 1.6.7 gofast (2015/08/07)"
+
 if [ "${1}" = "--version" -o "${1}" = "version" ] ; then
-    echo "iocage 1.6.7 (2015/07/26)"
+    echo "${iocage_version}"
     exit 0
 fi
 
@@ -94,6 +96,7 @@ fi
 if [ "$1" != "activate" ] ; then
     __find_mypool
     __check_filesystems
+    __check_pool_version
 fi
 
 __parse_cmd "$@"
