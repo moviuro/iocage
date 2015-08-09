@@ -274,6 +274,8 @@ __check_dataset () {
     __require_dataset_not_empty "${_dataset}" "${_name}"
     __require_dataset_not_multiple "${_dataset}" "${_name}"
     __require_dataset_single_word "${_dataset}" "${_name}"
+
+    __check_dataset_ioc_version ${_dataset}
 }
 
 # Check the validity of the given dataset name -------------------------

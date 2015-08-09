@@ -93,11 +93,11 @@ __parse_cmd () {
                 exit
                 ;;
             rcboot)
-                __rc_jails boot
+                __cmd_rcboot
                 exit
                 ;;
             rcshutdown)
-                __rc_jails shutdown
+                __cmd_rcshutdown
                 exit
                 ;;
             record)
@@ -435,6 +435,16 @@ __cmd_promote () {
     __check_dataset "${_dataset}" ${_name}
 
     __promote ${_dataset}
+}
+
+__cmd_rcboot () {
+    __check_all_ioc_version
+    __rc_jails boot
+}
+
+__cmd_rcshutdown () {
+    __check_all_ioc_version
+    __rc_jails shutdown
 }
 
 __cmd_record () {

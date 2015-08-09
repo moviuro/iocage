@@ -96,7 +96,6 @@ fi
 if [ "$1" != "activate" ] ; then
     __find_mypool
     __check_filesystems
-    __check_jail_ioc_versions
 fi
 
 __parse_cmd "$@"
