@@ -81,7 +81,7 @@ __parse_cmd () {
                 exit
                 ;;
             list)
-                __list_jails "${@}"
+                __cmd_list "${@}"
                 exit
                 ;;
             package)
@@ -413,6 +413,12 @@ __cmd_limits () {
     fi
 }
 
+__cmd_list () {
+    __check_all_ioc_version
+
+    __list_jails "${@}"
+}
+
 __cmd_package () {
     local _name _dataset
 
@@ -564,6 +570,8 @@ __cmd_show () {
     _property=${1}
     __require_not_empty "${_property}" "Missing property name!"
     __require_single_word "${_property}" "Invalid property name!"
+
+    __check_all_ioc_version
 
     __show ${_property}
 }
