@@ -326,7 +326,7 @@ __check_defaults_ioc_version () {
     _jail_version=$(__get_dataset_ioc_prop iocage_version ${_dataset})
 
     if [ "${_jail_version}" != "${iocage_version}" ] ; then
-        __update_default_ioc_properties
+        __update_defaults_ioc_properties
     fi
 }
 
@@ -335,7 +335,7 @@ __check_defaults_ioc_version () {
 # When iocage is updated and new properties are added, these properties
 # will be missing from existing jails. This function looks for any unset
 # properties on the default dataset and sets them to the hardcoded default.
-__update_default_ioc_properties () {
+__update_defaults_ioc_properties () {
     local _dataset _CONF _prop _value
 
     _dataset=${pool}/iocage/.defaults
