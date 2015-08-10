@@ -138,6 +138,7 @@ sync_tgt_zpool="none"
 # FTP variables
 ftpproto="http"
 ftphost="ftp.freebsd.org"
+ftpdir="/pub/FreeBSD/releases/amd64/${release}"
 ftpfiles="base.txz doc.txz lib32.txz src.txz"
 
 # Resource limits
@@ -249,12 +250,12 @@ CONF_ZFS="compression
           reservation"
 
 # ZFS sync (not used yet)
-CONF_SYNC="sync_stat
+CONF_SYNC="sync_state
            sync_target
            sync_tgt_zpool"
 
 # ftp properties
-CONF_FTP="ftphost ftpdir"
+CONF_FTP="ftpproto ftphost ftpdir ftpfiles"
 
 # Basejail filesystems
 bfs_list="bin

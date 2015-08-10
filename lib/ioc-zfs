@@ -370,7 +370,7 @@ __update_dataset_ioc_properties () {
 
     _dataset=${1}
 
-    _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+    _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     echo "Updating iocage properties for ${_uuid}" >&2
 
     _CONF="${CONF_RCTL}

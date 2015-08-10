@@ -42,13 +42,7 @@ __get_default_prop () {
 
     _property=${1}
     
-    _value=$(__get_jail_prop "${_property}" ${pool}/iocage/.defaults)
-
-    if [ "${_value}" != '-' ] ; then
-        echo "${_value}"
-    else
-        echo "none"
-    fi
+    __get_jail_prop "${_property}" ${pool}/iocage/.defaults
 }
 
 # Find and return the jail's top level ZFS dataset
@@ -248,6 +242,7 @@ __get_jail_prop () {
 
     _found=0
 
+    # "status" pseudo-property
     if [ ${_property} == "status" ] || [ ${_property} == "all" ] ; then
         _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
         if __is_running ${_uuid} ; then
@@ -274,15 +269,7 @@ __get_jail_prop () {
     for _prop in ${_CONF} ; do
         if [ ${_prop} == ${_property} ] ; then
             _found=1
-            _value=$(__get_dataset_ioc_prop ${_prop} ${_dataset})
-
-            # Fix nonexistent property problem (zfs get returns "-")
-            # info: https://github.com/iocage/iocage/issues/76
-            if [ "${_value}" == "-" ] ; then
-                echo "none"
-            else
-                echo "${_value}"
-            fi
+            __get_dataset_ioc_prop ${_prop} ${_dataset}
             return
 
         elif [ ${_property} == "all" ] ; then
@@ -296,8 +283,7 @@ __get_jail_prop () {
         for _prop in ${CONF_ZFS} ; do
             if [ ${_prop} == ${_property} ] ; then
                 _found=1
-                _value=$(__get_dataset_zfs_prop ${_prop} ${_dataset})
-                echo "${_value}"
+                __get_dataset_zfs_prop ${_prop} ${_dataset}
                 return
             fi
         done
