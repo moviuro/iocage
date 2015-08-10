@@ -318,7 +318,7 @@ __check_dataset_ioc_version () {
 }
 
 # Same as above but for the .defaults dataset.
-__check_default_ioc_version () {
+__check_defaults_ioc_version () {
     local _dataset _jail_version _uuid
 
     _dataset=${pool}/iocage/.defaults
