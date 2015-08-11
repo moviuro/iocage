@@ -184,23 +184,24 @@ __list_jails () {
 }
 
 __print_disk () {
-    local _jails _jail _uuid _crt _res _qta _use _ava
+    local _jails _jail _uuid _tag _crt _res _qta _use _ava
     
     _jails=$(__find_jail ALL)
 
-    printf "%-36s  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
-           "UUID" "CRT" "RES" "QTA" "USE" "AVA"
+    printf "%-36s  %s\n  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
+           "UUID" "TAG" "CRT" "RES" "QTA" "USE" "AVA"
 
     for _jail in ${_jails} ; do
         _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+        _tag=$(__get_dataset_ioc_prop tag ${_jail})
         _crt=$(__get_dataset_zfs_prop compressratio ${_jail})
         _res=$(__get_dataset_zfs_prop reservation ${_jail})
         _qta=$(__get_dataset_zfs_prop quota ${_jail})
         _use=$(__get_dataset_zfs_prop used ${_jail})
         _ava=$(__get_dataset_zfs_prop available ${_jail})
 
-        printf "%-36s  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
-               "${_uuid}" "${_crt}" "${_res}" "${_qta}" "${_use}" "${_ava}"
+        printf "%-36s  %s\n  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
+               "${_uuid}" "${_tag}" "${_crt}" "${_res}" "${_qta}" "${_use}" "${_ava}"
     done
 }
 
