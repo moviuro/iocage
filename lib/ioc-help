@@ -23,7 +23,7 @@ SYNOPSIS
   iocage console UUID|TAG
   iocage exec [-u username | -U username] UUID|TAG|ALL command [arg ...]
   iocage chroot UUID|TAG [command]
-  iocage df
+  iocage df [-h]
   iocage show property
   iocage get property|all UUID|TAG
   iocage set property=value UUID|TAG
@@ -177,9 +177,14 @@ SUBCOMMANDS
     downloaded releases.
     Non iocage jail listed, only if jail in UP state.
 
-  df
+  df [-h]
 
-    List disk space related information. Available fields:
+    List disk space related information. If -h is specified, the output is
+    formatted in a human readable manner, and tags are shown. Otherwise, the
+    output displays raw values so as to be machine parseable, and tags are not
+    shown.
+
+    Available fields:
 
     CRT - compression ratio
     RES - reserved space

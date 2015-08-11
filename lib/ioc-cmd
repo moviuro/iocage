@@ -41,7 +41,7 @@ __parse_cmd () {
                 exit
                 ;;
             df)
-                __print_disk
+                __cmd_df "${@}"
                 exit
                 ;;
             exec)
@@ -288,6 +288,25 @@ __cmd_destroy () {
         fi
 
         __destroy_jail ${_dataset} ${_force}
+    fi
+}
+
+__cmd_df () {
+    local _flag _ioc
+
+    _flag=${1}
+
+    if [ "${_flag}" == "-h" ] ; then
+        # Human-readable
+        __print_disk
+    else
+        # Machine-parseable
+        _ioc_uuid="org.freebsd.iocage:host_hostuuid"
+        echo "UUID CRT RES QTA USE AVA"
+        zfs get -Hpo value -rd1 \
+            ${_ioc_uuid},compressratio,reservation,quota,used,available \
+            ${pool}/iocage/jails \
+        | awk 'NR > 6 { printf "%s%s", $0, (NR % 6 ? " " : "\n") }'
     fi
 }
 
