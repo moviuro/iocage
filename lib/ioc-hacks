@@ -1,6 +1,8 @@
 #!/bin/sh
 
 # truncate mountpoint to work around 88 char mount limit on FreeBSD
+# FIXME: this can screw up the tag symlink in ${iocroot}/tags if the
+# hack88 property on the jail is changed
 __hack88_mount () {
     local _dataset _fulluuid _shortuuid _mountpoint _mount_len _hack88
 

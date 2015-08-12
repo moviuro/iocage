@@ -50,17 +50,17 @@ __reclone_basejail () {
 
 # This creates jails ---------------------------------------------------
 __create_jail () {
-    local _flag _configured _dataset _fs_list _zfsconfig _fs _dir
+    local _flag _dataset _fs_list _zfsconfig _fs _dir
 
-    { zfs list -r ${pool}/iocage/releases | grep -q ${release} ; } ||
+    zfs list -r ${pool}/iocage/releases | grep -q ${release} ||
         __fatal_error "Release ${release} not found locally, run fetch first."
 
     _flag=${1}
 
-    _configured=0
     _dataset=${pool}/iocage/jails/${uuid}
 
     case "${_flag}" in
+        # Create a cloned jail.
         -c)
             _fs_list=$(zfs list -rHo name ${pool}/iocage/releases/${release})
             _zfsconfig=$(__configure_jail generate)
@@ -71,19 +71,17 @@ __create_jail () {
                 cfs=$(echo ${_fs} | sed s#/releases/${release}#/jails/${uuid}#g)
                 eval "zfs clone ${_zfsconfig} ${_fs}@${uuid} ${_cfs}"
             done
-            
-            _configured=1
             ;;
-        
+
+        # Create an empty jail.
         -e)
             _zfsconfig=$(__configure_jail generate)
 
             eval "zfs create -p ${_zfsconfig} ${_dataset}"
             zfs create -p ${_dataset}/root
-
-            _configured=1
             ;;
-        
+
+        # Create a basejail.
         -b)
             export type="basejail"
             _zfsconfig=$(__configure_jail generate)
@@ -102,29 +100,26 @@ __create_jail () {
                 cp -a ${iocroot}/base/${release}/root/${_dir} \
                    ${iocroot}/jails/${uuid}/root/${_dir}
             done
-            
-            _configured=1
             ;;
 
+        # Create a standard jail.
         *)
             zfs snapshot -r ${pool}/iocage/releases/${release}@${uuid}
             zfs send     -R ${pool}/iocage/releases/${release}@${uuid} \
             | zfs recv      ${_dataset}
             zfs destroy  -r ${pool}/iocage/releases/${release}@${uuid}
             zfs destroy  -r ${_dataset}@${uuid}
+
+            __configure_jail ${_dataset}
             ;;
     esac
 
-    if [ ${_configured} -ne 1 ] ; then
-        __configure_jail ${_dataset}
-    fi
-
     touch ${iocroot}/jails/${uuid}/fstab
 
-    # remove any residual clone snapshots carried over from the RELEASE datasets
+    # Remove any clone snapshots carried over from the RELEASE datasets.
     __snapremove ${_dataset} ALL
 
-    # at create time set the default rc.conf
+    # Write the default rc.conf to the jail, except for empty jails.
     if [ "${_flag}" != "-e" ] ; then
         echo "hostname=\"${hostname}\"" > ${iocroot}/jails/${uuid}/root/etc/rc.conf
         __jail_rc_conf >> ${iocroot}/jails/${uuid}/root/etc/rc.conf
@@ -137,8 +132,8 @@ __create_jail () {
     zfs set mountpoint=none ${pool}/${jail_zfs_dataset}
     zfs set jailed=on ${pool}/${jail_zfs_dataset}
 
-    # Install extra packages
-    # this requires working resolv.conf in jail
+    # Install extra packages.
+    # This requires working resolv.conf in jail
     if [ "${pkglist}" != "none" ] ; then
         __hack88_mount ${_dataset}
         __pkg_install "${iocroot}/jails/${uuid}/root"
@@ -200,7 +195,9 @@ __destroy_jail () {
 
     echo "  Destroying: ${_fulluuid}"
 
-    __unlink_tag ${_dataset}
+    ## FIXME: Symlinks to tags currently disabled, see lib/ioc-common for
+    ## comments on __link_tag ()
+    #__unlink_tag ${_dataset}
     zfs destroy -fr ${_dataset}
 
     if [ "${_origin}" != "-" ] ; then
@@ -249,7 +246,7 @@ __check_filesystems () {
             zfs create -p ${pool}${_fs}
             zfs set mountpoint=${_fs} ${pool}${_fs}
             if [ ${_fs} == ${iocroot}/.defaults ] ; then
-                __reset_jail_props default > /dev/null 2>&1
+                __update_defaults_ioc_properties
             fi
         fi
     done

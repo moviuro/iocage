@@ -228,7 +228,7 @@ __find_mypool () {
 
         echo "Setting up zpool [${_pool}] for iocage usage..."
         echo "If you wish to change zpool, use 'iocage activate'"
-        __set_dataset_ioc_prop active=yes ${_pool}
+        __activate ${_pool}
     fi
 
     export pool=${_pool}

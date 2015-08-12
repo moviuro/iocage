@@ -173,10 +173,13 @@ __cmd_activate () {
     local _pool
 
     _pool=${1}
-    __require_not_empty "${_pool}" "Missing pool name!"
-    __require_single_word "${_pool}" "Invalid pool name!"
 
-    __activate ${_pool}
+    if [ -z "${_pool}" ] ; then
+        __find_mypool
+    else
+        __require_single_word "${_pool}" "Invalid pool name!"
+        __activate ${_pool}
+    fi
 }
 
 __cmd_cap () {

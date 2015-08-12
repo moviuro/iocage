@@ -85,7 +85,7 @@ __start_jail () {
                 exit 1
             fi
             
-            echo "-[${_fulluuid}] Configuring VNET"
+            echo "[${_fulluuid}] Configuring VNET"
             __networking start ${_dataset}
             if [ ${?} -eq 0 ] ; then
                 echo -e "[${_fulluuid}] Configuring VNET ${_OK}"

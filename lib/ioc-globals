@@ -141,6 +141,10 @@ ftphost="ftp.freebsd.org"
 ftpdir="/pub/FreeBSD/releases/amd64/${release}"
 ftpfiles="base.txz doc.txz lib32.txz src.txz"
 
+#
+# Note that the ordering of CONF_* variables is significant!
+#
+
 # Resource limits
 CONF_RCTL="memoryuse
            memorylocked
