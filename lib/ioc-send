@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # This is for remote host initialization
-# example: iocage init-host IP-ADDRESS
+# example: iocage init-host server.example.com systempool
 # will set up the host for iocage
 
 __init_host () {

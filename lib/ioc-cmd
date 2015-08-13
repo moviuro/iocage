@@ -299,10 +299,7 @@ __cmd_df () {
 
     _flag=${1}
 
-    if [ "${_flag}" == "-h" ] ; then
-        # Human-readable
-        __print_disk
-    else
+    if [ "${_flag}" == "-p" ] ; then
         # Machine-parseable
         _ioc_uuid="org.freebsd.iocage:host_hostuuid"
         echo "UUID CRT RES QTA USE AVA"
@@ -310,6 +307,9 @@ __cmd_df () {
             ${_ioc_uuid},compressratio,reservation,quota,used,available \
             ${pool}/iocage/jails \
         | awk 'NR > 6 { printf "%s%s", $0, (NR % 6 ? " " : "\n") }'
+    else
+        # Human-readable
+        __print_disk
     fi
 }
 
