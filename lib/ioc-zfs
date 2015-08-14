@@ -10,6 +10,14 @@ __activate () {
     __set_dataset_ioc_prop active=yes ${_pool}
 }
 
+__deactivate () {
+    local _pool
+
+    _pool=${1}
+
+    __unset_dataset_ioc_prop active ${_pool}
+}
+
 __create_basejail () {
     local _release _fs
 
@@ -386,4 +394,23 @@ __update_dataset_ioc_properties () {
     done
 
     __set_dataset_ioc_prop iocage_version="${iocage_version}" ${_dataset}
+}
+
+# Unset a property by inheriting from the parent dataset.
+__unset_dataset_zfs_prop () {
+    local _property _dataset
+
+    _property=${1}
+    _dataset=${2}
+
+    zfs inherit ${_property} ${_dataset}
+}
+
+__unset_dataset_ioc_prop () {
+    local _property _dataset
+
+    _property=${1}
+    _dataset=${2}
+
+    zfs inherit org.freebsd.iocage:${_property} ${_dataset}
 }

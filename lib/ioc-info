@@ -201,8 +201,22 @@ __print_disk () {
         _ava=$(__get_dataset_zfs_prop available ${_jail})
 
         printf "%-36s  %s\n  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
-               "${_uuid}" "${_tag}" "${_crt}" "${_res}" "${_qta}" "${_use}" "${_ava}"
+               "${_uuid}" "${_tag}" \
+               "${_crt}" "${_res}" "${_qta}" "${_use}" "${_ava}"
     done
+}
+
+__print_disk_parseable () {
+    local _ioc
+
+    _ioc="org.freebsd.iocage"
+
+    echo "UUID CRT RES QTA USE AVA"
+
+    zfs get -Hpo value -rd1 \
+        ${_ioc}:host_hostuuid,compressratio,reservation,quota,used,available \
+        ${pool}/iocage/jails \
+    | awk 'NR > 6 { printf "%s%s", $0, (NR % 6 ? " " : "\n") }'
 }
 
 __find_mypool () {

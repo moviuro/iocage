@@ -32,6 +32,10 @@ __parse_cmd () {
                 __cmd_create "${@}"
                 exit
                 ;;
+            deactivate)
+                __cmd_deactivate "${@}"
+                exit
+                ;;
             defaults)
                 __print_defaults
                 exit
@@ -240,6 +244,16 @@ __cmd_create () {
     __create_jail "${@}"
 }
 
+__cmd_deactivate () {
+    local _pool
+
+    _pool=${1}
+    __require_not_empty "${_pool}" "Missing pool name!"
+    __require_single_word "${_pool}" "Invalid pool name!"
+
+    __deactivate ${_pool}
+}
+
 __cmd_destroy () {
     local _name _force _answer _dataset _fulluuid _tag
 
@@ -301,12 +315,7 @@ __cmd_df () {
 
     if [ "${_flag}" == "-p" ] ; then
         # Machine-parseable
-        _ioc_uuid="org.freebsd.iocage:host_hostuuid"
-        echo "UUID CRT RES QTA USE AVA"
-        zfs get -Hpo value -rd1 \
-            ${_ioc_uuid},compressratio,reservation,quota,used,available \
-            ${pool}/iocage/jails \
-        | awk 'NR > 6 { printf "%s%s", $0, (NR % 6 ? " " : "\n") }'
+        __print_disk_parseable
     else
         # Human-readable
         __print_disk
