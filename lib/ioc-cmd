@@ -20,6 +20,10 @@ __parse_cmd () {
                 __cmd_chroot "${@}"
                 exit
                 ;;
+            clean)
+                __cmd_clean "${@}"
+                exit
+                ;;
             clone)
                 __cmd_clone "${@}"
                 exit
@@ -211,6 +215,55 @@ __cmd_chroot () {
     __chroot ${_dataset} "${@}"
 }
 
+__cmd_clean () {
+    local _force _all _releases _jails _opt _destroying _answer
+
+    _force=0
+    _all=0
+    _releases=0
+    _jails=0
+
+    while getopts ":farj" _opt; do
+        case ${_opt} in
+            "f") _force=1 ;;
+            "a") _all=1 ;;
+            "r") _releases=1 ;;
+            "j") _jails=1 ;;
+            "?") __fatal_error "Invalid command syntax!" ;;
+        esac
+    done
+
+    if [ ${_force} -eq 0 ] ; then
+        case ${_all}${_releases}${_jails} in
+            1??) _destroying="${pool}/iocage" ;;
+            011) _destroying="all releases and all jails" ;;
+            010) _destroying="all releases" ;;
+            001) _destroying="all jails" ;;
+            *) __fatal_error "Unreachable condition." ;;
+        esac
+
+        echo
+        echo "  WARNING: This will destroy ${_destroying}"
+        echo
+        echo -n "  Are you sure? y[N]: "
+        read _answer
+
+        if [ "${_answer}" != "Y" -a "${_answer}" != "y" ] ; then
+            echo "  Command not confirmed. No action taken."
+            exit 1
+        fi
+    fi
+
+    if [ ${_all} -eq 1 ] ; then
+        __clean_all
+    else
+        [ ${_releases} -eq 1 ] && __clean_releases
+        [ ${_jails} -eq 1 ] && __clean_jails
+    fi
+
+    return 0
+}
+
 __cmd_clone () {
     local _name _snapshot _dataset
 
@@ -265,47 +318,28 @@ __cmd_destroy () {
         _force=1
     fi
 
-    __check_name_all "${_name}"
+    __check_name "${_name}"
 
-    if [ ${_name} == "ALL" ] ; then
-        if [ ${_force} -eq 0 ] ; then
-            echo
-            echo "  WARNING: this will destroy ALL jails"
-            echo
-            echo "  Please make sure all jails are stopped before continuing."
-            echo
-            echo -n "  Are you sure ? y[N]: "
-            read _answer
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}" ${_name}
 
-            if [ "${_answer}" != "Y" ] && [ "${_answer}" != "y" ] ; then
-                echo "  Command not confirmed.  No action taken."
-                exit 1
-            fi
+    if [ ${_force} -eq 0 ] ; then
+        _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+        _tag=$(__get_dataset_ioc_prop tag ${_dataset})
+        echo
+        echo "  WARNING: this will destroy jail ${_fulluuid} (${_tag})"
+        echo "  Dataset: ${_dataset}"
+        echo
+        echo -n "  Are you sure ? y[N]: "
+        read _answer
+
+        if [ "${_answer}" != "Y" -a "${_answer}" != "y" ] ; then
+            echo "  Command not confirmed.  No action taken."
+            exit 1
         fi
-
-        __destroy_all ${_force}
-    else
-        _dataset=$(__find_jail ${_name})
-        __check_dataset "${_dataset}" ${_name}
-
-        if [ ${_force} -eq 0 ] ; then
-            _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-            _tag=$(__get_dataset_ioc_prop tag ${_dataset})
-            echo
-            echo "  WARNING: this will destroy jail ${_fulluuid} (${_tag})"
-            echo "  Dataset: ${_dataset}"
-            echo
-            echo -n "  Are you sure ? y[N]: "
-            read _answer
-
-            if [ "${_answer}" != "Y" ] && [ "${_answer}" != "y" ] ; then
-                echo "  Command not confirmed.  No action taken."
-                exit 1
-            fi
-        fi
-
-        __destroy_jail ${_dataset} ${_force}
     fi
+
+    __destroy_jail ${_dataset} ${_force}
 }
 
 __cmd_df () {
@@ -323,12 +357,11 @@ __cmd_df () {
 }
 
 __cmd_exec () {
-    local _kexecopts _opt _name _dataset
+    local _jexecopts _opt _name _dataset
     
+    # check for -U or -u to pass to jexec
     OPTIND=1
     _jexecopts=""
-
-    # check for -U or -u to pass to jexec
     while getopts u:U: _opt "${@}"; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}";;
@@ -339,7 +372,6 @@ __cmd_exec () {
 
     _name=${1}
     __check_name_all "${_name}"
-
     shift
 
     if [ ${_name} == "ALL" ]; then
@@ -489,7 +521,7 @@ __cmd_record () {
 
     _action=${1}
     __require_not_empty "${_action}" "Missing arguments!"
-    [ "${_action}" == "start" ] || [ "${_action}" == "stop" ] ||
+    [ "${_action}" == "start" -o "${_action}" == "stop" ] ||
         __fatal_error "Invalid action! Must be one of start|stop"
 
     _name=${2}

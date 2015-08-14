@@ -35,7 +35,10 @@ __create_basejail () {
 }
 
 __reclone_basejail () {
+    local _OK
     local _dataset _fulluuid _jail_release _fs
+
+    _OK="\e[32mOK\e[0m"
 
     _dataset=${1}
     
@@ -45,7 +48,7 @@ __reclone_basejail () {
     zfs destroy -rRf ${pool}/iocage/base@${_fulluuid}
     zfs snapshot -r  ${pool}/iocage/base@${_fulluuid}
 
-    echo "* ${_fulluuid} is a basejail, re-cloning jail.."
+    echo "[${_fulluuid}] Re-cloning basejail"
 
     # Re-clone required filesystems
     for _fs in ${bfs_list} ; do
@@ -54,6 +57,8 @@ __reclone_basejail () {
             ${pool}/iocage/base/${_jail_release}/root/${_fs}@${_fulluuid} \
             ${_dataset}/root/${_fs}
     done
+
+    echo "[${_fulluuid}] Re-cloning basejail ${_OK}"
 }
 
 # This creates jails ---------------------------------------------------
@@ -76,7 +81,8 @@ __create_jail () {
             zfs snapshot -r ${pool}/iocage/releases/${release}@${uuid}
 
             for _fs in ${_fs_list} ; do
-                cfs=$(echo ${_fs} | sed s#/releases/${release}#/jails/${uuid}#g)
+                _cfs=$(echo ${_fs} \
+                       | sed s#/releases/${release}#/jails/${uuid}#g)
                 eval "zfs clone ${_zfsconfig} ${_fs}@${uuid} ${_cfs}"
             done
             ;;
@@ -231,6 +237,101 @@ __destroy_all () {
         __destroy_jail ${_jail} ${_force}
     done
 
+    rm -f ${iocroot}/tags/*
+}
+
+# Destroy ${pool}/iocage. Any running iocage jails are stopped first.
+__clean_all () {
+    local _running _uuid
+
+    # Get a list of all running iocage jails.
+    _running=$(jls name | awk '/^ioc-/ { sub(/^ioc-/, "", $1); print $1 }')
+
+    # Stop them all in parallel.
+    for _uuid in ${_running} ; do
+        __stop_jail ${pool}/iocage/jails/${_uuid} &
+    done
+
+    # Wait for all the jails to be stopped.
+    wait
+
+    # Destroy the iocage dataset.
+    echo "  Destroying ${pool}/iocage"
+    zfs destroy -rRf ${pool}/iocage
+}
+
+# Destroy ${pool}/iocage/releases and ${pool}/iocage/base. Any running iocage
+# jails that are cloned from either of these datasets are stopped first.
+__clean_releases () {
+    local _running _clones _uuid
+
+    #
+    # Stop all running iocage jails that are clones of a release.
+    #
+
+    # Create a regex for matching the running iocage jails. The resulting
+    # string will have an extra | at the end which will need to be removed.
+    _running=$(jls name \
+              | awk '/^ioc-/ { sub(/^ioc-/, "", $1); printf "%s|", $1 }')
+
+    # Create a list of running clones by listing jail datasets alongside their
+    # origin and matching the origin against the datasets to be removed as well
+    # as the UUID against the running jails. To match basejails this way
+    # requires the list depth to be set to 3, so we reduce the output to
+    # unique datasets by splitting the dataset name into parts and only
+    # printing the UUID portion, then piping through uniq.
+    _clones=$(zfs list -Hrd3 -o name,origin ${pool}/iocage/jails \
+             | awk -v origins="^${pool}/iocage/(releases|base)/" \
+                   -v running="${_running%|}" \
+                   '$2 ~ origins && $1 ~ running {
+                      split($1, name, "/");
+                      print name[4];
+                    }' \
+             | uniq)
+
+    # Stop running jails in parallel.
+    for _uuid in ${_clones} ; do
+        __stop_jail ${pool}/iocage/jails/${_uuid} &
+    done
+
+    # Wait for the jails to be stopped.
+    wait
+
+    #
+    # Destroy the releases and the bases created from them.
+    #
+
+    echo "  Destroying ${pool}/iocage/base"
+    zfs destroy -rRf ${pool}/iocage/base
+
+    echo "  Destroying ${pool}/iocage/downloaded"
+    zfs destroy -rRf ${pool}/iocage/download
+
+    echo "  Destroying ${pool}/iocage/releases"
+    zfs destroy -rRf ${pool}/iocage/releases
+}
+
+# Destroy ${pool}/iocage/jails. Any running jails are stopped first.
+__clean_jails () {
+    local _running _uuid
+
+    # Get a list of all running iocage jails.
+    _running=$(jls name | awk '/^ioc-/ { sub(/^ioc-/, "", $1); print $1 }')
+
+    # Stop them all in parallel.
+    for _uuid in ${_running} ; do
+        __stop_jail ${pool}/iocage/jails/${_uuid} &
+    done
+
+    # Wait for all the jails to be stopped.
+    wait
+
+    # Destroy the jails dataset.
+    echo "  Destroying ${pool}/iocage/jails"
+    zfs destroy -rRf ${pool}/iocage/jails
+
+    # Remove all the tag symlinks.
+    echo "  Removing symlinks in ${iocroot}/tags"
     rm -f ${iocroot}/tags/*
 }
 
