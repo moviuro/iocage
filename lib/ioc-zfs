@@ -146,10 +146,11 @@ __create_jail () {
     zfs set mountpoint=none ${pool}/${jail_zfs_dataset}
     zfs set jailed=on ${pool}/${jail_zfs_dataset}
 
+    __update_mountpoint ${_dataset}
+
     # Install extra packages.
     # This requires working resolv.conf in jail
     if [ "${pkglist}" != "none" ] ; then
-        __hack88_mount ${_dataset}
         __pkg_install "${iocroot}/jails/${uuid}/root"
     fi
 }
@@ -179,11 +180,14 @@ __clone_jail () {
     done
 
     _clone_dataset=${pool}/iocage/jails/${uuid}
+
+    __update_mountpoint ${_clone_dataset}
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_clone_dataset})
 
     mv ${_mountpoint}/fstab ${_mountpoint}/fstab.${uuid}
     touch ${_mountpoint}/fstab
 
+    # TODO: Handle hack88 here.
     sed -E -e "s/[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}/${uuid}/g" \
         -i '' ${_mountpoint}/root/etc/rc.conf
 }
@@ -209,9 +213,7 @@ __destroy_jail () {
 
     echo "  Destroying: ${_fulluuid}"
 
-    ## FIXME: Symlinks to tags currently disabled, see lib/ioc-common for
-    ## comments on __link_tag ()
-    #__unlink_tag ${_dataset}
+    __unlink_tag ${_dataset}
     zfs destroy -fr ${_dataset}
 
     if [ "${_origin}" != "-" ] ; then
@@ -363,6 +365,8 @@ __check_filesystems () {
     if [ ${_missing} -gt 0 ] ; then
         zfs mount -a
     fi
+
+    mkdir -p ${iocroot}/tags
 }
 
 # Check that all our jails are compatible with this version of iocage.

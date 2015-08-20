@@ -53,8 +53,7 @@ __start_jail () {
         __reclone_basejail ${_dataset}
     fi
 
-    __hack88_mount ${_dataset}
-
+    __update_mountpoint ${_dataset}
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
     _procfs=$(__get_dataset_ioc_prop mount_procfs ${_dataset})

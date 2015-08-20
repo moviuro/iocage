@@ -1,30 +1,109 @@
 #!/bin/sh
 
-# truncate mountpoint to work around 88 char mount limit on FreeBSD
-# FIXME: this can screw up the tag symlink in ${iocroot}/tags if the
-# hack88 property on the jail is changed
-__hack88_mount () {
-    local _dataset _fulluuid _shortuuid _mountpoint _mount_len _hack88
+# Update the mountpoint of a jail.
+#
+# When the hack88 property of a jail is changed, we have to update the mount
+# point of the jail's dataset and fix the tag symlink. This is also required
+# when the jail is first created.
+__update_mountpoint () {
+    local _dataset _mountpoint _mount_len _hack88
+
+    _dataset=${1}
+
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+    _hack88=$(__get_dataset_ioc_prop hack88 ${_dataset})
+
+    # The length of "/jails/" is 7.
+    _mountpoint_uuid_len=$((${#_mountpoint} - ${#iocroot} - 7))
+
+    # If the current mountpoint is out of sync with hack88, truncate or restore
+    # as required.
+    if [ "${_hack88}" -eq 1 ] && [ "${_mountpoint_uuid_len}" -eq 36 ] ; then
+        __truncate_mountpoint ${_dataset}
+    elif [ "${_hack88}" -ne 1 ] && [ "${_mountpoint_uuid_len}" -lt 36 ] ; then
+        __restore_mountpoint ${_dataset}
+    fi
+
+    __replace_tag_symlink ${_dataset}
+}
+
+# Truncate mountpoint to work around the 88 character mount limit on FreeBSD.
+__truncate_mountpoint () {
+    local _dataset _fulluuid _shortuuid
+
+    _dataset=${1}
+
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+
+    # Keep only the portion of the UUID before the first '-'.
+    _shortuuid=${_fulluuid%%-*}
+
+    zfs unmount -f ${_dataset}
+    __set_dataset_zfs_prop mountpoint=${iocroot}/jails/${_shortuuid} ${_dataset}
+    __recursive_mount ${_dataset}
+    rmdir ${iocroot}/jails/${_fulluuid}
+}
+
+# Restore mountpoint to use the full UUID instead of a truncated path.
+__restore_mountpoint () {
+    local _dataset _fulluuid _shortuuid
 
     _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _shortuuid=${_fulluuid%%-*}
-    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-    _mount_len=$(echo ${_mountpoint} | awk -F/ '{ print length($4) }')
-    _hack88=$(__get_dataset_ioc_prop hack88 ${_dataset})
 
-    if [ "${_hack88}" -eq 1 ] && [ "${_mount_len}" -eq 36 ] ; then
-        echo "  INFO: truncating jail mountpoint"
-        zfs umount -f ${iocroot}/jails/${_fulluuid}
-        __set_dataset_zfs_prop mountpoint=${iocroot}/jails/${_shortuuid} ${_dataset}
-        zfs list -rH -o name ${_dataset} | \
-            grep -v ${_fulluuid}/root/data | xargs -L 1 zfs mount
-    elif [ "${_hack88}" -ne 1 ] && [ "${_mount_len}" -lt 36 ] ; then
-        echo "  INFO: restoring jail mountpoint"
-        zfs umount -f ${iocroot}/jails/${_shortuuid}
-        __set_dataset_zfs_prop mountpoint=${iocroot}/jails/${_fulluuid} ${_dataset}
-        zfs list -rH -o name ${_dataset} | \
-            grep -v ${_fulluuid}/root/data | xargs -L 1 zfs mount
-    fi
+    zfs unmount -f ${_dataset}
+    __set_dataset_zfs_prop mountpoint=${iocroot}/jails/${_fulluuid} ${_dataset}
+    __recursive_mount ${_dataset}
+    rmdir ${iocroot}/jails/${_shortuuid}
+}
+
+__recursive_mount () {
+    local _dataset
+
+    _dataset=${1}
+
+    # If you don't like what order things are being mounted here, you should
+    # probably just use legacy mountpoints.
+    zfs list -Hro name,mountpoint ${_dataset} \
+        | awk '$2 !~ /^(none|legacy)$/ { print $1 }' \
+        | xargs -L 1 zfs mount
+}
+
+# Replace the tag symlink to this jail.
+#
+# This removes any symlinks that point to the given jail.
+__replace_tag_symlink () {
+    local _dataset
+
+    _dataset=${1}
+
+    __unlink_tag ${_dataset}
+    __link_tag ${_dataset}
+}
+
+__link_tag () {
+    local _dataset _tag _mountpoint
+
+    _dataset=${1}
+
+    _tag=$(__get_dataset_ioc_prop tag ${_dataset})
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+
+    ln -sf ${_mountpoint} ${iocroot}/tags/${_tag}
+}
+
+__unlink_tag () {
+    local _dataset _fulluuid _shortuuid
+
+    _dataset=${1}
+
+    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _shortuuid=${_fulluuid%%-*}
+
+    find ${iocroot}/tags \
+         -type l \
+         -lname "${iocroot}/jails/${_shortuuid}*" \
+         -delete
 }

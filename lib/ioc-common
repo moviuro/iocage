@@ -296,7 +296,7 @@ __check_dataset_all () {
 
 # Set properties -------------------------------------------------------
 __set_jail_prop () {
-    local _property _dataset _pname _pval _CONF _prop
+    local _property _dataset _pname _pval _CONF _prop _default
 
     _property=${1}
     _dataset=${2}
@@ -306,10 +306,28 @@ __set_jail_prop () {
 
     _pval=${_property#*=}
 
-    if [ ${_pname} == "ip4_addr" ] ; then
-        _pval=$(__sub_autoip4 "${_pval}") ||
-            __fatal_error "Failed to set automatic IPv4 address."
-    fi
+    # Catch some special cases.
+    case ${_pname} in
+        "ip4_addr")
+            # Check if the user wants us to generate an automatic address.
+            _pval=$(__sub_autoip4 "${_pval}") ||
+                __fatal_error "Failed to set automatic IPv4 address."
+            ;;
+        "tag")
+            __set_dataset_ioc_prop tag="${_pval}" ${_dataset}
+            __replace_tag_symlink ${_dataset}
+            return
+            ;;
+        "hack88")
+            if __is_running ${_dataset##*/} ; then
+                __fatal_error "Cannot update this property on a running jail."
+            fi
+            __set_dataset_ioc_prop hack88="${_pval}" ${_dataset}
+            __update_mountpoint ${_dataset}
+            return
+            ;;
+        *);;
+    esac
 
     _CONF="${CONF_NET}
            ${CONF_JAIL}
@@ -321,14 +339,19 @@ __set_jail_prop () {
     for _prop in ${_CONF} ; do
         if [ ${_prop} == ${_pname} ] ; then
             __set_dataset_ioc_prop ${_prop}="${_pval}" ${_dataset}
-            return 0
+            return
         fi
     done
 
     for _prop in ${CONF_ZFS} ; do
         if [ ${_prop} == ${_pname} ] ; then
+            # We have a few properties that should be read-only through iocage.
+            eval _default=\$${_pname}
+            [ "${_default}" != "readonly" ] ||
+                __fatal_error "This property is read-only."
+
             __set_dataset_zfs_prop ${_prop}="${_pval}" ${_dataset}
-            return 0
+            return
         fi
     done
 
@@ -352,13 +375,6 @@ __set_dataset_ioc_prop () {
     _pname=${_property%%=*}
 
     zfs set org.freebsd.iocage:"${_property}" ${_dataset}
-
-    ## FIXME: Symlinks for tags are disabled until a more robust system
-    ## for keeping them up to date is put in place.
-    #if [ ${_pname} == "tag" ] ; then
-    #    __unlink_tag ${_dataset}
-    #    __link_tag ${_dataset}
-    #fi
 }
 
 __console () {
@@ -528,55 +544,4 @@ __fetch_release () {
               -s ${iocroot}/base/${release}/root/usr/src
     
     echo " DONE"
-}
-
-# reads tag property from given jail dataset
-# creates symlink from $iocroot/tags/<tag> to $iocroot/jails/<uuid>
-# lots of sanity checks because
-## FIXME: Tag symlinks have been disabled until a more robust system for
-## keeping the links up to date is implemented.
-__link_tag () {
-    local _dataset _mountpoint _tag _readlink_tag _readlink_mount _tag_date
-
-    _dataset=${1}
-
-    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-    [ "${_mountpoint}" != "none" ] && [ "${_mountpoint}" != "legacy" ] ||
-        __fatal_error "Invalid mountpoint property for jail dataset!"
-
-    _tag=$(__get_dataset_ioc_prop tag ${_dataset})
-    [ -n "${_tag}" ] && [ "${_tag}" != "-" ] ||
-        __fatal_error "Missing tag property for jail dataset!"
-    __require_single_word "${_tag}" "Invalid tag!"
-
-    mkdir -p ${iocroot}/tags
-
-    if [ ! -e ${iocroot}/tags/${_tag} ] ; then
-        # Symlink doesn't exist, create it.
-        ln -s "${_mountpoint}" ${iocroot}/tags/${_tag}
-    else
-        # Symlink exists, make sure it links to the correct location.
-        _readlink_mount=$(readlink ${iocroot}/tags/${_tag})
-        if [ "${_readlink_mount}" != "${_mountpoint}" ] ; then
-            echo >&2
-            echo "  WARNING: Replacing tag ${_tag}!" >&2
-            echo >&2
-
-            _readlink_tag=${_readlink_mount##*/}
-            ln -shf "${_mountpoint}" ${iocroot}/tags/${_tag}
-        fi
-    fi
-}
-
-# removes all symlinks found in $iocroot/tags pointing to the given jail dataset
-__unlink_tag () {
-    local _dataset _mountpoint
-
-    _dataset=${1}
-
-    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-    [ "${_mountpoint}" != "none" ] && [ "${_mountpoint}" != "legacy" ] ||
-        __fatal_error "Invalid mountpoint property for jail dataset!"
-
-    find ${iocroot}/tags -type l -lname "${_mountpoint}*" -exec rm -f \{\} \;
 }
