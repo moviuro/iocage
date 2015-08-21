@@ -3,7 +3,7 @@
 # Export every property specified on command line ----------------------
 __export_props () {
     local _i
-    
+
     for _i in "${@}" ; do
         if echo ${_i} | grep -qe ".*=.*" ; then
             export "${_i}"
@@ -46,7 +46,7 @@ __require_single_word () {
     _value=${1}
     _description=${2:-"Invalid value"}
     _words=$(__wc ${_value})
-    
+
     [ "${_words}" -eq 1 ] || __fatal_error "${_description}"
 }
 
@@ -300,7 +300,7 @@ __set_jail_prop () {
 
     _property=${1}
     _dataset=${2}
-    
+
     _pname=${_property%%=*}
     __require_not_empty "${_pname}" "Set failed, incorrect property syntax!"
 
@@ -400,7 +400,7 @@ __exec () {
 
     OPTIND=1
     _jexecopts=""
-    
+
     # check for -U or -u to pass to jexec
     while getopts u:U: _opt "${@}"; do
         case "${_opt}" in
@@ -412,7 +412,7 @@ __exec () {
 
     _dataset=${1}
     shift
-    
+
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _exec_fib=$(__get_dataset_ioc_prop exec_fib ${_dataset})
 
@@ -460,46 +460,21 @@ __chroot () {
 
 # Fetch release and prepare base ZFS filesystems -----------------------
 __fetch_release () {
-    local _match _answer _rel _file
+    local _file _non_interactive
 
-    _match=0
-
-    if [ -z "${iocset_release}" ] ; then
-	__print_release
-
-	echo -n "Please select a release [${release}]: "
-	read _answer
-
-	if [ -z "${_answer}" ] ; then
-	    _answer=${release}
-	else
-	    for _rel in ${supported_releases} ; do
-		if [ "${_answer}" == "${_rel}" ] ; then
-		    release=${_rel}
-		    _match=1
-		    break
-		fi
-	    done
-
-	    [ ${_match} -eq 1 ] ||
-                __fatal_error "Invalid release specified: ${_answer}"
-	fi
-    fi
-
-    zfs list | grep -wq ^${pool}${iocroot}/releases/${release}
+    zfs list -Hrd1 -o name ${pool}/iocage/releases \
+    | grep -xq ${pool}/iocage/releases/${release}
     if [ ${?} -ne 0 ] ; then
-        zfs create -o compression=lz4 -p ${pool}${iocroot}/releases/${release}/root
-        zfs create -o compression=lz4 -p ${pool}${iocroot}/download/${release}
-    fi
-
-    if [ -z "${ftpdir}" ] ; then
-	ftpdir="/pub/FreeBSD/releases/amd64/${release}"
+        zfs create -o compression=lz4 -p \
+            ${pool}/iocage/releases/${release}/root
+        zfs create -o compression=lz4 -p \
+            ${pool}/iocage/download/${release}
     fi
 
     cd ${iocroot}/download/${release}
     for _file in ${ftpfiles} ; do
         if [ ! -e "${_file}" ] ; then
-            fetch ${ftpproto}://${ftphost}${ftpdir}/${_file}
+            fetch "${ftpproto}://${ftphost}${ftpdir}/${_file}"
             [ ${?} -eq 0 ] ||
                 __fatal_error "Failed fetching ${_file}..."
         fi
@@ -513,17 +488,27 @@ __fetch_release () {
         fi
     done
 
-        echo "* Updating release to latest patch..."
-        sleep 2
+    echo "* Updating release to latest patch..."
+    sleep 2
 
-        env UNAME_r="${release}" env PAGER="/bin/cat" \
-            /usr/sbin/freebsd-update \
+    if [ $(uname -U) -lt 1002000 ] ; then
+        _non_interactive=""
+    else
+        _non_interactive="--not-running-from-cron"
+    fi
+
+    env UNAME_r="${release}" env PAGER="/bin/cat" \
+        /usr/sbin/freebsd-update \
+            ${_non_interactive} \
             -b ${iocroot}/releases/${release}/root \
-            -d ${iocroot}/releases/${release}/root/var/db/freebsd-update/ fetch
-        env UNAME_r="${release}" env PAGER="/bin/cat" \
-            /usr/sbin/freebsd-update \
+            -d ${iocroot}/releases/${release}/root/var/db/freebsd-update/ \
+            fetch
+
+    env UNAME_r="${release}" env PAGER="/bin/cat" \
+        /usr/sbin/freebsd-update \
             -b ${iocroot}/releases/${release}/root \
-            -d ${iocroot}/releases/${release}/root/var/db/freebsd-update/ install
+            -d ${iocroot}/releases/${release}/root/var/db/freebsd-update/ \
+            install
 
     if [ ! -d ${iocroot}/log ] ; then
         mkdir ${iocroot}/log
@@ -533,8 +518,10 @@ __fetch_release () {
 
     echo -n "* Copying release files to base jail..."
     chflags -R noschg ${iocroot}/base/${release}/root
-    tar --exclude \.zfs --exclude usr/sbin/chown -C ${iocroot}/releases/${release}/root -cf - . | \
-    tar --exclude \.zfs --exclude usr/sbin/chown -C ${iocroot}/base/${release}/root -xf -
+    tar --exclude \.zfs --exclude usr/sbin/chown \
+        -C ${iocroot}/releases/${release}/root -cf - . \
+    | tar --exclude \.zfs --exclude usr/sbin/chown \
+          -C ${iocroot}/base/${release}/root -xf -
 
     if [ ! -e "${iocroot}/base/${release}/root/usr/sbin/chown" ] ; then
        cd ${iocroot}/base/${release}/root/usr/sbin && ln -s ../bin/chgrp chown
@@ -542,6 +529,6 @@ __fetch_release () {
 
     etcupdate extract -D ${iocroot}/base/${release}/root \
               -s ${iocroot}/base/${release}/root/usr/src
-    
+
     echo " DONE"
 }

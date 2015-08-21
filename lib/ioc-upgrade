@@ -1,8 +1,9 @@
 #!/bin/sh
 
 __update () {
-    local _dataset _jail_type _fulluuid _mountpoint _date _jail_release
-    
+    local _dataset _jail_type _fulluuid _mountpoint _jail_release _date \
+          _non_interactive
+
     _dataset=${1}
 
     _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
@@ -16,18 +17,29 @@ __update () {
         _jail_release=$(__get_dataset_ioc_prop release ${_dataset})
         _date=$(date "+%F_%T")
 
-        echo "* creating back-out snapshot.."
+        echo "* creating back-out snapshot..."
         __snapshot ${_dataset} ioc-update_${_date}
 
-        echo "* Updating jail.."
+        echo "* Updating jail..."
+
+        if [ $(uname -U) -lt 102000 ] ; then
+            _non_interactive=""
+        else
+            _non_interactive="--not-running-from-cron"
+        fi
+
         env UNAME_r="${release}" env PAGER="/bin/cat" \
             /usr/sbin/freebsd-update \
-            -b ${_mountpoint}/root \
-            -d ${_mountpoint}/root/var/db/freebsd-update/ fetch
+                ${_non_interactive} \
+                -b ${_mountpoint}/root \
+                -d ${_mountpoint}/root/var/db/freebsd-update/ \
+                fetch
+
         env UNAME_r="${release}" env PAGER="/bin/cat" \
             /usr/sbin/freebsd-update \
-            -b ${_mountpoint}/root \
-            -d ${_mountpoint}/root/var/db/freebsd-update/ install
+                -b ${_mountpoint}/root \
+                -d ${_mountpoint}/root/var/db/freebsd-update/ \
+                install
 
         echo
         echo "* Once finished don't forget to remove the snapshot!"

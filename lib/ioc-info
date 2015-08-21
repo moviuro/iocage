@@ -3,7 +3,7 @@
 # Print supported releases----------------------------------
 __print_release () {
     local _rel
-    
+
     echo "Supported releases are: "
     for _rel in ${supported_releases} ; do
         printf "%15s\n" "${_rel}"
@@ -41,7 +41,7 @@ __get_default_prop () {
     local _property _value
 
     _property=${1}
-    
+
     __get_jail_prop "${_property}" ${pool}/iocage/.defaults
 }
 
@@ -56,9 +56,9 @@ __find_jail () {
         echo "${pool}/iocage/.defaults"
         return 0
     fi
-    
+
     _jails=$(zfs list -rHo name ${pool}/iocage/jails \
-             | grep -E "^${pool}/iocage/jails/[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}$")
+            | grep -E "^${pool}/iocage/jails/[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}$")
 
     if [ ${_name} == "ALL" ] ; then
         for _jail in ${_jails} ; do
@@ -66,12 +66,12 @@ __find_jail () {
         done
         return 0
     fi
-    
+
     _jlist=""
     _count=0
     for _jail in ${_jails} ; do
         _found=$(echo ${_jail} | grep -iEc "^${pool}/iocage/jails/${_name}")
-        
+
         if [ ${_found} -gt 0 ] ; then
             : $((_count += _found))
             _jlist=${_jail}
@@ -260,7 +260,7 @@ __list_releases () {
 
 __print_disk () {
     local _jails _jail _uuid _tag _crt _res _qta _use _ava
-    
+
     _jails=$(__find_jail ALL)
 
     printf "%-36s  %s\n  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
@@ -296,7 +296,7 @@ __print_disk_parseable () {
 
 __find_mypool () {
     local _found _pools _pool _mypool
-    
+
     _found=0
     _pools=$(zpool list -Ho name)
 
@@ -378,7 +378,7 @@ __get_jail_prop () {
             fi
         done
     fi
-    
+
     [ ${_found} -eq 1 ] ||
         __fatal_error "Unsupported property: ${_property}"
 }
@@ -405,7 +405,7 @@ __runtime () {
     local _dataset _fulluuid _params _param
 
     _dataset=${1}
-    
+
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
 
     # this all seems a bit silly...
@@ -421,7 +421,7 @@ __runtime () {
 # else use jail exec_<type> property unchanged
 __findscript () {
     local _dataset _type _mountpoint
-    
+
     _dataset=${1}
     _type=${2}
 
@@ -436,7 +436,7 @@ __findscript () {
 
 __is_running () {
     local _fulluuid
-    
+
     _fulluuid=${1}
 
     jls name | grep -q ioc-${_fulluuid}

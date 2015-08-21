@@ -3,7 +3,7 @@
 # Process command line options-------------------------
 __parse_cmd () {
     local _cmd
-    
+
     while [ ${#} -gt 0 ] ; do
         _cmd=${1}
         shift
@@ -269,7 +269,7 @@ __cmd_clone () {
 
     _name=${1%%@*}
     __check_name "${_name}"
-    
+
     _snapshot=${1#${_name}}
 
     _dataset=$(__find_jail ${_name})
@@ -358,7 +358,7 @@ __cmd_df () {
 
 __cmd_exec () {
     local _jexecopts _opt _name _dataset
-    
+
     # check for -U or -u to pass to jexec
     OPTIND=1
     _jexecopts=""
@@ -379,7 +379,7 @@ __cmd_exec () {
     else
         _dataset=$(__find_jail ${_name})
         __check_dataset "${_dataset}" ${_name}
-        
+
         __exec ${_jexecopts} ${_dataset} "${@}"
     fi
 }
@@ -392,12 +392,55 @@ __cmd_export () {
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
-    
+
     __export ${_dataset}
 }
 
 __cmd_fetch () {
+    local _release _match _rel
+
     __export_props "${@}"
+
+    __require_not_empty "${ftpproto}" "Missing value for ftpproto."
+    __require_single_word "${ftpproto}" "Invalid value for ftpproto."
+
+    # ftphost can be empty for "file" proto
+    [ -z "${ftphost}" ] || \
+        __require_single_word "${ftphost}" "Invalid value for ftphost."
+
+    # ftpdir at least needs a "/" but we can accomodate spaces in the path
+    __require_not_empty "${ftpdir}" "Missing value for ftpdir."
+
+    # ftpfiles must not be empty but can often be multiple words
+    __require_not_empty "${ftpfiles}" "Missing value for ftpfiles."
+
+    if [ -z "${iocset_release}" ] ; then
+	__print_release
+
+	echo -n "Please select a release [${release}]: "
+	read _release
+    else
+        _release=${iocset_release}
+    fi
+
+    # If a release was specified, make sure it is supported. Otherwise, we use
+    # the default release.
+    if [ -n "${_release}" ] ; then
+        _match=0
+	for _rel in ${supported_releases} ; do
+	    if [ "${_release}" == "${_rel}" ] ; then
+                # The requested release is supported; override the default.
+		release=${_release}
+		_match=1
+		break
+	    fi
+	done
+
+        # Error out if we didn't match a supported release.
+	[ ${_match} -eq 1 ] ||
+            __fatal_error "Invalid release specified: ${_answer}"
+    fi
+
     __fetch_release
 }
 
@@ -413,7 +456,7 @@ __cmd_get () {
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
-    
+
     __get_jail_prop ${_property} ${_dataset}
 }
 
@@ -443,7 +486,7 @@ __cmd_inuse () {
 
         _dataset=$(__find_jail ${_name})
         __check_dataset "${_dataset}" ${_name}
-    
+
         __rctl_inuse ${_dataset}
     fi
 }
@@ -471,7 +514,7 @@ __cmd_limits () {
 
         _dataset=$(__find_jail ${_name})
         __check_dataset "${_dataset}" ${_name}
-    
+
         __rctl_list ${_dataset}
     fi
 }
@@ -559,7 +602,7 @@ __cmd_record () {
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
-    
+
     __record ${_action} ${_dataset}
 }
 
@@ -572,7 +615,7 @@ __cmd_reset () {
     else
         _name=${2}
         _force=1
-    fi 
+    fi
 
     __check_name_all "${_name}"
 
@@ -596,7 +639,7 @@ __cmd_reset () {
     else
         _dataset=$(__find_jail ${_name})
         __check_dataset "${_dataset}" ${_name}
-        
+
         __reset_jail_props ${_dataset}
     fi
 }
@@ -625,7 +668,7 @@ __cmd_rollback () {
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
-    
+
     __rollback ${_dataset} ${_snapshot%@}
 }
 
@@ -646,7 +689,7 @@ __cmd_set () {
 
     _property=${1}
     __require_not_empty "${_property}" "Missing arguments!"
-    
+
     _name=${2}
     __check_name_default "${_name}"
 
@@ -720,7 +763,7 @@ __cmd_start () {
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
-    
+
     __start_jail ${_dataset}
 }
 
@@ -732,7 +775,7 @@ __cmd_stop () {
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
-    
+
     __stop_jail ${_dataset}
 }
 
@@ -744,7 +787,7 @@ __cmd_uncap () {
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
-    
+
     __rctl_uncap ${_dataset}
 }
 
@@ -756,7 +799,7 @@ __cmd_update () {
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
-    
+
     __update ${_dataset}
 }
 
@@ -775,6 +818,6 @@ __cmd_upgrade () {
         __require_single_word "${_release}" "Invalid release: ${_release}"
         export release=${_release}
     fi
-    
+
     __upgrade ${_dataset}
 }
