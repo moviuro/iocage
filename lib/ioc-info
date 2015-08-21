@@ -93,94 +93,169 @@ __find_jail () {
     fi
 }
 
+# List jails.
+#
+# The switches are binary 0 or 1 flags of the form:
+#   ${basejails}${templates}${long}${noheader}
+# where a 0 indicates the flag is not active.
+#
+# The basejails flag filters the list to only display basejails.
+# The templates flag adds template jails to the listing.
+# The long flag causes more information about the jail to be displayed.
+# The noheader flag cause the header to be suppressed.
+#
+# The basejails and templates flags can be combined to display only
+# the templates that are basejail type jails.
+#
+# As a reminder, a template can also be a basejail.
 __list_jails () {
-    local _jails _switch _all_jids _ioc_jids _state _non_ioc_jids _releases _rel _jail
-    local _uuid _boot _tag _mountpoint _template _jid _all_jail _ioc_jail
-    local _temp_loop_var _path _ip4 _host_hostname
-    
+    local _switches _jails _jail _type _template \
+          _uuid _boot _tag _jid _state \
+          _ipv4 _ipv6 _vnet _interfaces \
+          _vnet0_mac _vnet1_mac _vnet2_mac _vnet3_mac
+
+    _switches=${1}
+
     _jails=$(__find_jail ALL)
-    _switch=${1}
-    _all_jids=$(jls jid)
-    _ioc_jids=""
-    _non_ioc_jids=""
 
-    if [ "${_switch}" == "-r" ] ; then
-        echo "Downloaded releases:"
-        _releases=$(zfs list -o name -Hr ${pool}/iocage/releases \
-                    | awk -F/ '/RELEASE$/ { print $4 }')
-        for _rel in ${_releases} ; do
-            printf "%15s\n" ${_rel}
-        done
-        exit 0
-    fi
+    # All of the output in here gets piped through column for formatting.
+    {
+        # Print the correct header, unless suppressed.
+        # _switches:
+        # {don't care}{don't care}{long header?}{header suppressed?}
+        case ${_switches} in
 
-    printf "%-4s  %-36s  %s  %s  %s\n" "JID" "UUID" "BOOT" "STATE" "TAG"
-    for _jail in ${_jails} ; do
-        _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
-        _boot=$(__get_dataset_ioc_prop boot ${_jail})
-        _tag=$(__get_dataset_ioc_prop tag ${_jail})
-        _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_jail})
-        _template=$(__get_dataset_ioc_prop template ${_jail})
+            # Print the short header.
+            ??00)
+                printf "%s^%s^%s^%s^%s\n" \
+                       "JID" "UUID" "BOOT" "STATE" "TAG"
+                ;;
 
-        # get jid for iocage jails
-        _jid=$(jls -j ioc-${_uuid} jid 2> /dev/null)
-        if [ -z "${_jid}"  ] ; then
-            _jid="-"
-        fi
-        _ioc_jids="${_ioc_jids} ${_jid}"
+            # Print the long header.
+            ??10)
+                printf "%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s\n" \
+                       "JID" "UUID" "BOOT" "STATE" "TAG" "IPV4" "IPV6" \
+                       "VNET" "TYPE" "INTERFACES" \
+                       "VNET0_MAC" "VNET1_MAC" "VNET2_MAC" "VNET3_MAC"
+                ;;
 
-        if __is_running ${_uuid} ; then
-            _state="up"
-        else
-            _state="down"
-        fi
+        esac
 
-        if [ -z "${_switch}" ] ; then
-            _switch="zero"
-        fi
+        for _jail in ${_jails} ; do
 
-        if [ "${_switch}" == "-t" ] ; then
-            if [ "${_template}" == "yes" ] ; then
-                printf "%-4s  %-+.36s  %-3s   %-4s   %s\n" \
-                       "${_jid}" "${_uuid}" "${_boot}" "${_state}" "${_tag}"
-            fi
-        else
-            if [ "${_template}" != "yes" ] ; then
-                printf "%-4s  %-+.36s  %-4s  %-4s   %s\n" \
-                       "${_jid}" "${_uuid}" "${_boot}" "${_state}" "${_tag}"
-            fi
-        fi
-    done
+            # When asked for only basejails, skip the other jail types.
+            # _switches:
+            # {only basejails?}{don't care}{don't care}{don't care}
+            _type=$(__get_dataset_ioc_prop type ${_jail})
+            case ${_switches} in
+                1???) [ ${_type} = "basejail" ] || continue ;;
+            esac
 
-    # create list of active jids not registered in iocage
-    for _all_jail in ${_all_jids} ; do
-        for _ioc_jail in ${_ioc_jids} ; do
-            if [ ${_all_jail} == ${_ioc_jail} ] ; then
-                _temp_loop_var=""
-                break
+            # Skip templates unless asked to display them.
+            # _switches:
+            # {don't care}{show templates?}{don't care}{don't care}
+            _template=$(__get_dataset_ioc_prop template ${_jail})
+            case ${_switches} in
+                ?0??) [ ${_template} = "no" ] || continue ;;
+            esac
+
+            _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+            _boot=$(__get_dataset_ioc_prop boot ${_jail})
+            _tag=$(__get_dataset_ioc_prop tag ${_jail})
+
+            _jid=$(jls -j ioc-${_uuid} jid 2>/dev/null)
+            : ${_jid:="-"} # Set to "-" if empty.
+
+            if __is_running ${_uuid} ; then
+                _state="up"
             else
-                _temp_loop_var=${_all_jail}
+                _state="down"
             fi
-        done
-        if [ -n "${_temp_loop_var}" ] ; then
-            _non_ioc_jids="${_non_ioc_jids} ${_temp_loop_var}"
-        fi
-    done
 
-    # output non iocage jails currently active
+            # Print here and skip to the next if we are doing the short list.
+            # _switches:
+            # {don't care}{don't care}{long list?}{don't care}
+            case ${_switches} in
+                ??0?)
+                printf "%s^%s^%s^%s^%s\n" \
+                       "${_jid}" "${_uuid}" "${_boot}" "${_state}" "${_tag}"
+                continue
+                ;;
+            esac
+
+            _ipv4=$(__get_dataset_ioc_prop ip4_addr ${_jail})
+            _ipv6=$(__get_dataset_ioc_prop ip6_addr ${_jail})
+
+            # Only get the ioterfaces and mac addresses if vnet is on.
+            _vnet=$(__get_dataset_ioc_prop vnet ${_jail})
+            if [ ${_vnet} = "on" ] ; then
+                _interfaces=$(__get_dataset_ioc_prop interfaces ${_jail})
+                _vnet0_mac=$(__get_dataset_ioc_prop vnet0_mac ${_jail})
+                _vnet1_mac=$(__get_dataset_ioc_prop vnet1_mac ${_jail})
+                _vnet2_mac=$(__get_dataset_ioc_prop vnet2_mac ${_jail})
+                _vnet3_mac=$(__get_dataset_ioc_prop vnet3_mac ${_jail})
+            else
+                _interfaces="-"
+                _vnet0_mac="-"
+                _vnet1_mac="-"
+                _vnet2_mac="-"
+                _vnet3_mac="-"
+            fi
+
+            printf "%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s\n" \
+                   "${_jid}" "${_uuid}" "${_boot}" "${_state}" "${_tag}" \
+                   "${_ipv4}" "${_ipv6}" "${_vnet}" "${_type}" \
+                   "${_interfaces}" "${_vnet0_mac}" "${_vnet1_mac}" \
+                   "${_vnet2_mac}" "${_vnet3_mac}"
+
+        done
+    } | column -ts^ # Make a nice table with aligned columns.
+}
+
+__show_non_ioc_jails () {
+    local _noheader _non_ioc_jids _jid _path _ip4 _host_hostname
+
+    _noheader=${1}
+
+    _non_ioc_jids=$(jls jid name | awk '$2 !~ /^ioc-/ { print $1 }')
+
     if [ -n "${_non_ioc_jids}" ] ; then
-        if [ "${_switch}" != "-t" ] ; then
+
+        if [ ${_noheader} -eq 0 ] ; then
             printf "%-+40s\n" "--- non iocage jails currently active ---"
-            printf "%-4s  %-36s  %-15s  %s \n" "JID" "PATH" "IP4" "HOSTNAME"
+        fi
+
+        { # Everything in here gets formatted into a table by column.
+            if [ ${_noheader} -eq 0 ] ; then
+                printf "%s^%s^%s^%s\n" "JID" "PATH" "IP4" "HOSTNAME"
+            fi
+
             for _jid in ${_non_ioc_jids} ; do
                 _path=$(jls -j ${_jid} path)
                 _ip4=$(jls -j ${_jid} ip4.addr)
                 _host_hostname=$(jls -j ${_jid} host.hostname)
-                printf "%-4s  %-36.36s  %-15s  %s\n" \
+                printf "%s^%s^%s^%s\n" \
                        "${_jid}" "${_path}" "${_ip4}" "${_host_hostname}"
             done
-        fi
+        } | column -ts^ # Make a nice table with aligned columns.
     fi
+}
+
+__list_releases () {
+    local _noheader _releases _rel
+
+    _noheader=${1}
+
+    _releases=$(zfs list -Hro name ${pool}/iocage/releases \
+                | awk -F/ '/RELEASE$/ { print $4 }')
+
+    if [ ${_noheader} -eq 0 ] ; then
+        echo "Downloaded releases:"
+    fi
+
+    for _rel in ${_releases} ; do
+        printf "%15s\n" ${_rel}
+    done
 }
 
 __print_disk () {

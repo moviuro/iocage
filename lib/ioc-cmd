@@ -477,9 +477,39 @@ __cmd_limits () {
 }
 
 __cmd_list () {
+    local _noheader _basejails _long _nonioc _releases _templates _opt
+
+    _noheader=0
+    _basejails=0
+    _long=0
+    _nonioc=0
+    _releases=0
+    _templates=0
+
+    while getopts ":Hblnrt" _opt ; do
+        case ${_opt} in
+            "H") _noheader=1 ;;
+            "b") _basejails=1 ;;
+            "l") _long=1 ;;
+            "n") _nonioc=1 ;;
+            "r") _releases=1 ;;
+            "t") _templates=1 ;;
+            "?") __fatal_error "Invalid command syntax." ;;
+        esac
+    done
+
     __check_all_ioc_version
 
-    __list_jails "${@}"
+    if [ ${_releases} -eq 1 ] ; then
+        __list_releases ${_noheader}
+    else
+        __list_jails ${_basejails}${_templates}${_long}${_noheader}
+
+        # If we aren't showing only the basejails, show non-iocage jails, too.
+        if [ ${_basejails} -eq 0 ] ; then
+            __show_non_ioc_jails ${_noheader}
+        fi
+    fi
 }
 
 __cmd_package () {
