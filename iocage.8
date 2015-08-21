@@ -17,6 +17,7 @@
 \fBiocage\fP \fIstart\fP UUID|TAG
 \fBiocage\fP \fIstop\fP UUID|TAG
 \fBiocage\fP \fIrestart\fP UUID|TAG
+\fBiocage\fP \fIreboot\fP UUID|TAG
 \fBiocage\fP \fIrcboot\fP
 \fBiocage\fP \fIrcshutdown\fP
 \fBiocage\fP \fIconsole\fP UUID|TAG
@@ -270,6 +271,15 @@ latest updates applied.
     the jail's networking and the jail process itself. All processes are
     gracefully restarted inside the jail. Useful for quick and graceful
     restarts.
+
+.fam T
+.fi
+\fIrestart\fP \fIUUID\fP|TAG
+.PP
+.nf
+.fam C
+    Fully stop and restart the jail, the same as if `iocage stop` and `iocage
+    start` were executed separately.
 
 .fam T
 .fi

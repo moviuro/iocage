@@ -13,6 +13,7 @@ SYNOPSIS
   iocage start UUID|TAG
   iocage stop UUID|TAG
   iocage restart UUID|TAG
+  iocage reboot UUID|TAG
   iocage rcboot
   iocage rcshutdown
   iocage console UUID|TAG
@@ -196,6 +197,11 @@ SUBCOMMANDS
     the jail's networking and the jail process itself. All processes are
     gracefully restarted inside the jail. Useful for quick and graceful
     restarts.
+
+  reboot UUID|TAG
+
+    Fully stop and restart the jail, the same as if `iocage stop` and `iocage
+    start` were executed separately.
 
   rcboot
 

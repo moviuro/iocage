@@ -108,6 +108,10 @@ __parse_cmd () {
                 __cmd_rcshutdown
                 exit
                 ;;
+            reboot)
+                __cmd_reboot "${@}"
+                exit
+                ;;
             record)
                 __cmd_record "${@}"
                 exit
@@ -415,10 +419,10 @@ __cmd_fetch () {
     __require_not_empty "${ftpfiles}" "Missing value for ftpfiles."
 
     if [ -z "${iocset_release}" ] ; then
-	__print_release
+        __print_release
 
-	echo -n "Please select a release [${release}]: "
-	read _release
+        echo -n "Please select a release [${release}]: "
+        read _release
     else
         _release=${iocset_release}
     fi
@@ -427,17 +431,17 @@ __cmd_fetch () {
     # the default release.
     if [ -n "${_release}" ] ; then
         _match=0
-	for _rel in ${supported_releases} ; do
-	    if [ "${_release}" == "${_rel}" ] ; then
+        for _rel in ${supported_releases} ; do
+            if [ "${_release}" == "${_rel}" ] ; then
                 # The requested release is supported; override the default.
-		release=${_release}
-		_match=1
-		break
-	    fi
-	done
+                release=${_release}
+                _match=1
+                break
+            fi
+        done
 
         # Error out if we didn't match a supported release.
-	[ ${_match} -eq 1 ] ||
+        [ ${_match} -eq 1 ] ||
             __fatal_error "Invalid release specified: ${_answer}"
     fi
 
@@ -587,6 +591,18 @@ __cmd_rcboot () {
 __cmd_rcshutdown () {
     __check_all_ioc_version
     __rc_jails shutdown
+}
+
+__cmd_reboot () {
+    local _name _dataset
+
+    _name=${1}
+    __check_name "${_name}"
+
+    _dataset=$(__find_jail ${_name})
+    __check_dataset "${_dataset}"
+
+    __reboot_jail ${_dataset}
 }
 
 __cmd_record () {

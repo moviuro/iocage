@@ -7,7 +7,7 @@ __start_jail () {
 
     _OK="\e[32mOK\e[0m"
     _FAILED="\e[31mFAILED\e[0m"
-    
+
     _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
@@ -83,7 +83,7 @@ __start_jail () {
                 echo -e "[${_fulluuid}] Starting jail (VNET mode) ${_FAILED}"
                 exit 1
             fi
-            
+
             echo "[${_fulluuid}] Configuring VNET"
             __networking start ${_dataset}
             if [ ${?} -eq 0 ] ; then
@@ -430,9 +430,9 @@ __stop_jail () {
 # Soft restart
 __restart_jail () {
     local _dataset _fulluuid _exec_stop _exec_start _jid _tag _date
-    
+
     _dataset=${1}
-    
+
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _exec_stop=$(__get_dataset_ioc_prop exec_stop ${_dataset})
     _tag=$(__get_dataset_ioc_prop tag ${_dataset})
@@ -450,6 +450,16 @@ __restart_jail () {
     pkill -j ${_jid}
     jexec ioc-${_fulluuid} ${_exec_start} >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     __set_dataset_ioc_prop last_started=${_date} ${_dataset}
+}
+
+# Hard reboot
+__reboot_jail () {
+    local _dataset
+
+    _dataset=${1}
+
+    __stop_jail ${_dataset}
+    __start_jail ${_dataset}
 }
 
 __rc_jails () {
