@@ -524,7 +524,7 @@ __cmd_limits () {
 }
 
 __cmd_list () {
-    local _noheader _basejails _long _nonioc _releases _templates _opt
+    local _noheader _basejails _long _nonioc _releases _templates _opt _switches
 
     _noheader=0
     _basejails=0
@@ -550,7 +550,11 @@ __cmd_list () {
     if [ ${_releases} -eq 1 ] ; then
         __list_releases ${_noheader}
     else
-        __list_jails ${_basejails}${_templates}${_long}${_noheader}
+        # Concatenating the flags into one string like this makes it easy
+        # to pattern match conditions using case statements.
+        _switches=${_basejails}${_templates}${_long}${_noheader}
+
+        __list_jails ${_switches}
 
         if [ ${_nonioc} -eq 1 ] ; then
             __show_non_ioc_jails ${_noheader}
