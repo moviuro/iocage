@@ -14,7 +14,7 @@ SYNOPSIS
      iocage clone uuid|tag[@snapshot] [property=value]...
      iocage destroy [-f] uuid|tag|ALL
      iocage reset uuid|tag|ALL
-     iocage list [-H] -r | [-b|-t] [-ln]
+     iocage list [-H] -r|[-btnl]
      iocage start uuid|tag
      iocage stop uuid|tag
      iocage restart uuid|tag
@@ -203,25 +203,29 @@ DESCRIPTION
 
          You can also reset every jail at once by using the keyword "ALL".
 
-     list [-H] -r | [-tbnl]
+     list [-H] -r|[-btnl]
 
-         Displays a list of all jails.
+         Displays a list of all jails.  Templates are not listed by default.
 
          -H      Omit headers in the output.
 
-         -r      List only the downloaded releases.
+         -r      List only the downloaded releases.  In this mode, all other
+                 flags apart from -H are no-ops.
 
-         -t      List only the jails that are templates.
+         -t      List templates and not other jails.
 
          -b      List only the jails that are basejails.
 
-         -l      Long output. Show extra information about the listed jails.
+         -l      Long output.  Show extra information about the listed jails.
 
-         -n      List non-iocage jails currently running, as well.
+         -n      List non-iocage jails currently running in addition to the
+                 iocage jail list.
+
+         Combining the -t and -b flags shows only templates that are basejails.
 
      df [-p]
 
-         List disk space related information. If -p is specified, the output
+         List disk space related information.  If -p is specified, the output
          displays raw values so as to be machine parseable, and tags are not
          shown.
 
@@ -260,7 +264,7 @@ DESCRIPTION
 
          Stop all jails with "boot" property set to "on".  Intended for full
          host shutdown.  Jails will be stopped in an ordered fashion based on
-         their "priority" property. Jails with the same priority are started in
+         their "priority" property.  Jails with the same priority are started in
          parallel.
 
      console uuid|tag
@@ -280,8 +284,8 @@ DESCRIPTION
 
      show property
 
-         Show the given property for all jails and templates. This is useful for
-         comparing settings/properties across all jails.
+         Show the given property for all jails and templates.  This is useful
+         for comparing settings/properties across all jails.
 
          Example:
 
@@ -418,12 +422,12 @@ DESCRIPTION
 
 PROPERTIES
      For more information on properties please check the relevant man page which
-     is noted under each property in the form of "Source: manpage". Source
+     is noted under each property in the form of "Source: manpage".  Source
      "local" marks iocage specific properties.
 
      pkglist=none | path-to-file
-         A text file containing one package per line. These will be auto-
-         installed when a jail is created. Works only in combination with the
+         A text file containing one package per line.  These will be auto-
+         installed when a jail is created.  Works only in combination with the
          create subcommand.
 
          Default: none
@@ -431,7 +435,7 @@ PROPERTIES
 
      vnet=on | off
          This controls whether to start the jail with VNET or a shared IP
-         configuration. Default is to auto-guess from a sysctl. If you don't
+         configuration.  Default is to auto-guess from a sysctl.  If you don't
          need a fully-virtualized per-jail network stack, set it to off.
 
          Default: auto-guess
@@ -447,7 +451,7 @@ PROPERTIES
 
          For shared IP jails if an interface is given before the IP address, an
          alias for the address will be added to that interface, as it is with
-         the interface parameter. If the DEFAULT tag is used instead of an
+         the interface parameter.  If the DEFAULT tag is used instead of an
          interface, the interface will be automatically assigned based upon the
          system's default interface.
 
@@ -455,18 +459,19 @@ PROPERTIES
          address, it will be used when adding the IP alias.
 
          If the AUTOIP4 tag is used in place of an ip-address, the IP address
-         will be automatically assigned at first start of the jail. This
+         will be automatically assigned at first start of the jail.  This
          requires that the ip4_autostart and ip4_autoend variables are set on
-         the 'default' property source. If used, the IP4 address will be set to
+         the 'default' property source.  If used, the IP4 address will be set to
          the first available based upon the given range and already created
          jails.
 
          Example:
-         # iocage set ip4_autostart="100" default
-         # iocage set ip4_autoend="150" default
+
+           # iocage set ip4_autostart="100" default
+           # iocage set ip4_autoend="150" default
 
          This will result in the automatic IPv4 address being assigned in the
-         base range of the default network interface. I.E. if the local default
+         base range of the default network interface.  I.E. if the local default
          NIC is set to 192.168.0.XXX, then the new address will be
          192.168.0.[100-150]
 
@@ -474,10 +479,12 @@ PROPERTIES
          listed.
 
          Example:
-         # iocage set ip4_addr="vnet0|192.168.0.10/24,vnet1|10.1.1.10/24"
 
-         This would configure interfaces vnet0 and vnet1 in a VNET jail. In this
-         case no network configuration is necessary in the jail's rc.conf file.
+           # iocage set ip4_addr="vnet0|192.168.0.10/24,vnet1|10.1.1.10/24"
+
+         This would configure interfaces vnet0 and vnet1 in a VNET jail.  In
+         this case no network configuration is necessary in the jail's rc.conf
+         file.
 
          Default: none
          Source: jail(8)
@@ -514,7 +521,7 @@ PROPERTIES
          configure a default IPv6 route inside a VNET jail.
 
      resolver=none | nameserver IP;nameserver IP;search domain.local
-         Sets the jail's resolver (resolv.conf). Fields must be ; delimited
+         Sets the jail's resolver (resolv.conf).  Fields must be ; delimited
          which are translated to newlines in resolv.conf.
 
          If the resolver is set to none (default) the jail will inherit the
@@ -526,8 +533,8 @@ PROPERTIES
 
      interfaces=vnet0:bridge0,vnet1:bridge1 | vnet0:bridge0
          By default there are two interfaces specified with their bridge
-         association. Up to four interfaces are supported. Interface
-         configurations are separated by commas. Format is interface:bridge,
+         association.  Up to four interfaces are supported.  Interface
+         configurations are separated by commas.  Format is interface:bridge,
          where left value is the virtual VNET interface name, right value is the
          bridge name where the virtual interface should be attached.
 
@@ -540,19 +547,19 @@ PROPERTIES
          Default: UUID
          Source: jail(8)
 
-     exec_fib=0 | 1 ..
+     exec_fib=0 | 1 ...
          The FIB (routing table) to set when running commands inside the jail.
 
          Default: 0
          Source: jail(8)
 
-     devfs_ruleset=4 | 0 ..
+     devfs_ruleset=4 | 0 ...
          The number of the devfs ruleset that is enforced for mounting devfs in
          this jail.  A value of zero (default) means no ruleset is enforced.
          Descendant jails inherit the parent jail's devfs ruleset enforcement.
          Mounting devfs inside a jail is possible only if the allow_mount and
          allow_mount_devfs permissions are effective and enforce_statfs is set
-         to a value lower than 2. Devfs rules and rulesets cannot be viewed or
+         to a value lower than 2.  Devfs rules and rulesets cannot be viewed or
          modified from inside a jail.
 
          NOTE: It is important that only appropriate device nodes in devfs be
@@ -616,7 +623,7 @@ PROPERTIES
          Run commands in a clean environment.  The environment is discarded
          except for HOME, SHELL, TERM and USER.  HOME and SHELL are set to the
          target login's default values.  USER is set to the target login.  TERM
-         is imported from the current environment. The environment variables
+         is imported from the current environment.  The environment variables
          from the login class capability database for the target login are also
          set.
 
@@ -681,7 +688,7 @@ PROPERTIES
          syscalls: statfs(2), fstatfs(2), getfsstat(2) and fhstatfs(2) (as well
          as similar compatibility syscalls).  When set to 0, all mount points
          are available without any restrictions.  When set to 1, only mount
-         points below the jail's chroot directory are visible. In addition to
+         points below the jail's chroot directory are visible.  In addition to
          that, the path to the jail's chroot directory is removed from the front
          of their pathnames.  When set to 2 (default), above syscalls can
          operate only on a mount-point where the jail's chroot directory is
@@ -689,7 +696,7 @@ PROPERTIES
 
          Default: 2. jail(8)
 
-     children_max=0 | ..
+     children_max=0 | ...
          The number of child jails allowed to be created by this jail (or by
          other jails under this jail).  This limit is zero by default,
          indicating the jail is not allowed to create child jails.  See the
@@ -718,7 +725,7 @@ PROPERTIES
      jail_zfs_dataset=iocage/jails/UUID/root/data | zfs_filesystem
          This is the dataset to be jailed and fully handed over to a jail.
          Takes the ZFS filesystem name without pool name.
-         NOTE: only valid if jail_zfs=on. By default the mountpoint is set to
+         NOTE: only valid if jail_zfs=on.  By default the mountpoint is set to
          none, to mount this dataset set its mountpoint inside the jail i.e.
          "zfs set mountpoint=/data full-dataset-name" and issue "mount -a".
 
@@ -775,7 +782,7 @@ PROPERTIES
 
      allow_mount=0 | 1
          Privileged users inside the jail will be able to mount and unmount file
-         system types marked as jail-friendly. The lsvfs(1) command can be used
+         system types marked as jail-friendly.  The lsvfs(1) command can be used
          to find file system types available for mount from within a jail.  This
          permission is effective only if enforce_statfs is set to a value lower
          than 2.
@@ -795,7 +802,7 @@ PROPERTIES
 
      allow_mount_nullfs=0 | 1
          Privileged users inside the jail will be able to mount and unmount the
-         nullfs file system. This permission is effective only together with
+         nullfs file system.  This permission is effective only together with
          allow_mount and if enforce_statfs is set to a value lower than 2.
 
          Default: 0
@@ -829,7 +836,7 @@ PROPERTIES
          Source: jail(8)
 
      allow_quotas=0 | 1
-         The jail root may administer quotas on the jail's filesystem(s). This
+         The jail root may administer quotas on the jail's filesystem(s).  This
          includes filesystems that the jail may share with other jails or with
          non-jailed parts of the system.
 
@@ -855,8 +862,8 @@ PROPERTIES
          Source: local
 
      template=yes | no
-         This property controls whether the jail is a template. Templates are
-         not started by iocage. Set to yes if you intend to convert jail into
+         This property controls whether the jail is a template.  Templates are
+         not started by iocage.  Set to yes if you intend to convert jail into
          template.
 
          (See EXAMPLES section)
@@ -866,8 +873,8 @@ PROPERTIES
 
      boot=on | off
          If set to "on" jail will be auto-started at boot time (rcboot
-         subcommand) and stopped at shutdown time (rcshutdown subcommand). Jails
-         will be started and stopped based on their priority value.
+         subcommand) and stopped at shutdown time (rcshutdown subcommand).
+         Jails will be started and stopped based on their priority value.
 
          Default: off
          Source: local
@@ -884,14 +891,14 @@ PROPERTIES
          Default: root
          Source: local
 
-     priority=99 | 50 ..
+     priority=99 | 50 ...
          Start priority at boot time, smaller value means higher priority.
          Also, for shutdown the order will be reversed.
 
-         Default: 99.
+         Default: 99
 
      last_started
-         Last successful start time. Auto set every time jail starts.
+         Last successful start time.  Auto set every time jail starts.
 
          Default: timestamp
          Source: local
@@ -903,8 +910,8 @@ PROPERTIES
          Source: local
 
      hostid=UUID
-         The UUID of the host node. Jails won't start if this property differs
-         from the actual UUID of the host node. This is to safeguard jails from
+         The UUID of the host node.  Jails won't start if this property differs
+         from the actual UUID of the host node.  This is to safeguard jails from
          being started on different nodes in case they are periodically
          replicated across.
 
@@ -912,7 +919,7 @@ PROPERTIES
          Source: local
 
      release=10.2-RELEASE | 9.3-RELEASE
-         The RELEASE used at creation time. Can be set to any string if needed.
+         The RELEASE used at creation time.  Can be set to any string if needed.
 
          Default: the most recent supported RELEASE
          Source: local
@@ -942,14 +949,14 @@ PROPERTIES
          Source: zfs(8)
 
      origin
-         This is only set for clones. Read-only.
+         This is only set for clones.  Read-only.
          For cloned file systems or volumes, the snapshot from which the clone
-         was created. See also the clones property.
+         was created.  See also the clones property.
 
          Default: -
          Source: zfs(8)
 
-     quota=15G | 50G | ..
+     quota=15G | 50G | ...
          Quota for jail.
          Limits the amount of space a dataset and its descendents can consume.
          This property enforces a hard limit on the amount of space used.  This
@@ -962,12 +969,12 @@ PROPERTIES
          Source: zfs(8)
 
      mountpoint
-         Path for the jail's root filesystem. Read-only.
+         Path for the jail's root filesystem.  Read-only.
 
          Source: zfs(8)
 
      compressratio
-         Compression ratio. Read-only.
+         Compression ratio.  Read-only.
          For non-snapshots, the compression ratio achieved for the used space of
          this dataset, expressed as a multiplier.  The used property includes
          descendant datasets, and, for clones, does not include the space shared
@@ -986,7 +993,7 @@ PROPERTIES
          Source: zfs(8)
 
      used
-         Used space by jail. Read-only.
+         Used space by jail.  Read-only.
          The amount of space consumed by this dataset and all its descendents.
          This is the value that is checked against this dataset's quota and
          reservation.  The space used does not include this dataset's
@@ -998,14 +1005,14 @@ PROPERTIES
 
          When snapshots (see the "Snapshots" section) are created, their space
          is initially shared between the snapshot and the file system, and
-         possibly with previous snapshots. As the file system changes, space
+         possibly with previous snapshots.  As the file system changes, space
          that was previously shared becomes unique to the snapshot, and counted
-         in the snapshot's space used. Additionally, deleting snapshots can
+         in the snapshot's space used.  Additionally, deleting snapshots can
          increase the amount of space unique to (and used by) other snapshots.
 
          The amount of space used, available, or referenced does not take into
-         account pending changes. Pending changes are generally accounted for
-         within a few seconds. Committing a change to a disk using fsync(2) or
+         account pending changes.  Pending changes are generally accounted for
+         within a few seconds.  Committing a change to a disk using fsync(2) or
          O_SYNC does not necessarily guarantee that the space usage information
          is updated immediately.
 
@@ -1013,17 +1020,17 @@ PROPERTIES
 
      dedup=on | off | verify | sha256[,verify]
          Deduplication for jail.
-         Configures deduplication for a dataset. The default value is off.
+         Configures deduplication for a dataset.  The default value is off.
          The default deduplication checksum is sha256 (this may change in the
          future).  When dedup is enabled, the checksum defined here overrides
-         the checksum property. Setting the value to verify has the same
+         the checksum property.  Setting the value to verify has the same
          effect as the setting sha256,verify.
 
          If set to verify, ZFS will do a byte-to-byte comparsion in case of
          two blocks having the same signature to make sure the block contents
          are identical.
 
-         Default: off.
+         Default: off
          Source: zfs(8)
 
      reservation=size | none
@@ -1051,7 +1058,7 @@ PROPERTIES
          Source: local
 
      cpuset=1 | 1,2,3,4 | 1-2 | off
-         Controls the jail's CPU affinity. For more details please refer to
+         Controls the jail's CPU affinity.  For more details please refer to
          cpuset(1).
 
          Default: off
@@ -1223,78 +1230,78 @@ RESOURCE LIMITS
 EXAMPLES
      Set up iocage from scratch:
 
-       iocage fetch
+       # iocage fetch
 
      Create first jail:
 
-       iocage create tag=myjail
+       # iocage create tag=myjail
 
      List jails:
 
-       iocage list
+       # iocage list
 
      Start jail:
 
-       iocage start UUID
+       # iocage start UUID
 
      Turn on resource limits and apply them:
 
-       iocage set rlimits=on UUID
-       iocage cap UUID
+       # iocage set rlimits=on UUID
+       # iocage cap UUID
 
      Display resource usage:
 
-       iocage inuse UUID
+       # iocage inuse UUID
 
      Convert jail into template:
 
-       iocage set template=yes UUID
+       # iocage set template=yes UUID
 
      List templates:
 
-       iocage list -t
+       # iocage list -t
 
      Clone jail from template:
 
-       iocage clone UUID-of-template tag=myjail
+       # iocage clone UUID-of-template tag=myjail
 
-     Record all changeing files in a jail
+     Record all changing files in a jail:
 
-       iocage record start UUID
+       # iocage record start UUID
 
-     Stop recording
+     Stop recording:
 
-       iocage record stop UUID
+       # iocage record stop UUID
 
-     Create package from recorded session
+     Create package from recorded session:
 
-       iocage package UUID
+       # iocage package UUID
 
-     Import package on another host
+     Import package on another host:
 
-       iocage import UUID
+       # iocage import UUID
 
-     Get the last successful start time for all jails
+     Get the last successful start time for all jails:
 
-       iocage show last_started
+       # iocage show last_started
 
 HINTS
      iocage marks a ZFS pool in the pool's comment field and identifies the
      active pool for use based on this string.
 
      If using VNET don't forget to add the node's physical NIC into one
-     of the bridges if you need an outside connection. Also read bridge(4)
+     of the bridges if you need an outside connection.  Also read bridge(4)
      to see how traffic is handled if you are not familiar with this concept
      (in a nutshell: bridge behaves like a network switch).
 
-     PF firewall is not supported inside VNET jails as of July 2014. PF can be
-     enabled for the host however. IPFW is fully supported inside a VNET jail.
+     PF firewall is not supported inside VNET jails as of July 2014.  PF can be
+     enabled for the host however.  IPFW is fully supported inside a VNET jail.
 
      Property validation is not handled by iocage (to keep it simple) so please
      make sure your property values are supported before configuring any
      properties.
 
-     The actual jail name in the jls(8) output is set to ioc-UUID. This is a
+     The actual jail name in the jls(8) output is set to ioc-UUID.  This is a
      required workaround as jails will refuse to start with jail(8) when name
      starts with a "0".
 
@@ -1319,12 +1326,12 @@ SEE ALSO
 
 BUGS
      In case of bugs/issues/feature requests, please open an issue at
-     https://github.com/iocage/iocage/issues
+     https://github.com/freqlabs/iocage/issues
 
 AUTHORS
 
-       Peter Toth <peter.toth198@gmail.com>
-       Brandon Schneider <brandonschneider89@gmail.com>
+     Peter Toth <peter.toth198@gmail.com>
+     Brandon Schneider <brandonschneider89@gmail.com>
 
 SPECIAL THANKS
      Sichendra Bista - for his ever willing attitude and ideas.

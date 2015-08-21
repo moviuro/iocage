@@ -100,14 +100,12 @@ __find_jail () {
 # where a 0 indicates the flag is not active.
 #
 # The basejails flag filters the list to only display basejails.
-# The templates flag adds template jails to the listing.
+# The templates flag lists only templates, which are normally suppressed.
 # The long flag causes more information about the jail to be displayed.
 # The noheader flag cause the header to be suppressed.
 #
 # The basejails and templates flags can be combined to display only
 # the templates that are basejail type jails.
-#
-# As a reminder, a template can also be a basejail.
 __list_jails () {
     local _switches _jails _jail _type _template \
           _uuid _boot _tag _jid _state \
@@ -151,11 +149,13 @@ __list_jails () {
                 1???) [ ${_type} = "basejail" ] || continue ;;
             esac
 
-            # Skip templates unless asked to display them.
+            # When asked for templates, skip non-template jails.
+            # Otherwise, skip templates.
             # _switches:
             # {don't care}{show templates?}{don't care}{don't care}
             _template=$(__get_dataset_ioc_prop template ${_jail})
             case ${_switches} in
+                ?1??) [ ${_template} = "yes" ] || continue ;;
                 ?0??) [ ${_template} = "no" ] || continue ;;
             esac
 

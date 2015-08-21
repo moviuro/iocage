@@ -552,8 +552,7 @@ __cmd_list () {
     else
         __list_jails ${_basejails}${_templates}${_long}${_noheader}
 
-        # If we aren't showing only the basejails, show non-iocage jails, too.
-        if [ ${_basejails} -eq 0 ] ; then
+        if [ ${_nonioc} -eq 1 ] ; then
             __show_non_ioc_jails ${_noheader}
         fi
     fi
