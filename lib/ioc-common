@@ -476,7 +476,7 @@ __chroot () {
 
 # Fetch release and prepare base ZFS filesystems -----------------------
 __fetch_release () {
-    local _file _non_interactive
+    local _file _non_interactive _release_root
 
     zfs list -Hrd1 -o name ${pool}/iocage/releases \
     | grep -xq ${pool}/iocage/releases/${release}
@@ -513,18 +513,26 @@ __fetch_release () {
         _non_interactive="--not-running-from-cron"
     fi
 
-    env UNAME_r="${release}" env PAGER="/bin/cat" \
-        /usr/sbin/freebsd-update \
-            ${_non_interactive} \
-            -b ${iocroot}/releases/${release}/root \
-            -d ${iocroot}/releases/${release}/root/var/db/freebsd-update/ \
-            fetch
+    _release_root=${iocroot}/iocage/releases/${release}/root
 
-    env UNAME_r="${release}" env PAGER="/bin/cat" \
-        /usr/sbin/freebsd-update \
-            -b ${iocroot}/releases/${release}/root \
-            -d ${iocroot}/releases/${release}/root/var/db/freebsd-update/ \
-            install
+    if [ -e ${_release_root}/etc/freebsd-update.conf ] ; then
+
+        env UNAME_r="${release}" env PAGER="/bin/cat" \
+            /usr/sbin/freebsd-update \
+                ${_non_interactive} \
+                -b ${_release_root} \
+                -f ${_release_root}/etc/freebsd-update.conf \
+                -d ${_release_root}/var/db/freebsd-update/ \
+                fetch
+
+        env UNAME_r="${release}" env PAGER="/bin/cat" \
+            /usr/sbin/freebsd-update \
+                -b ${_release_root} \
+                -f ${_release_root}/etc/freebsd-update.conf \
+                -d ${_release_root}/var/db/freebsd-update/ \
+                install
+
+    fi
 
     if [ ! -d ${iocroot}/log ] ; then
         mkdir ${iocroot}/log

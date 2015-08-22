@@ -2,7 +2,7 @@
 
 __update () {
     local _dataset _jail_type _fulluuid _mountpoint _jail_release _date \
-          _non_interactive
+          _non_interactive _release_root
 
     _dataset=${1}
 
@@ -17,7 +17,7 @@ __update () {
         _jail_release=$(__get_dataset_ioc_prop release ${_dataset})
         _date=$(date "+%F_%T")
 
-        echo "* creating back-out snapshot..."
+        echo "* Creating back-out snapshot..."
         __snapshot ${_dataset} ioc-update_${_date}
 
         echo "* Updating jail..."
@@ -28,18 +28,26 @@ __update () {
             _non_interactive="--not-running-from-cron"
         fi
 
-        env UNAME_r="${release}" env PAGER="/bin/cat" \
-            /usr/sbin/freebsd-update \
-                ${_non_interactive} \
-                -b ${_mountpoint}/root \
-                -d ${_mountpoint}/root/var/db/freebsd-update/ \
-                fetch
+        _release_root=${iocroot}/releases/${_jail_release}/root
 
-        env UNAME_r="${release}" env PAGER="/bin/cat" \
-            /usr/sbin/freebsd-update \
-                -b ${_mountpoint}/root \
-                -d ${_mountpoint}/root/var/db/freebsd-update/ \
-                install
+        if [ -e ${_release_root}/etc/freebsd-update.conf ] ; then
+
+            env UNAME_r="${_jail_release}" env PAGER="/bin/cat" \
+                /usr/sbin/freebsd-update \
+                    ${_non_interactive} \
+                    -b ${_mountpoint}/root \
+                    -f ${_release_root}/freebsd-update.conf \
+                    -d ${_mountpoint}/root/var/db/freebsd-update/ \
+                    fetch
+
+            env UNAME_r="${_jail_release}" env PAGER="/bin/cat" \
+                /usr/sbin/freebsd-update \
+                    -b ${_mountpoint}/root \
+                    -f ${_release_root}/freebsd-update.conf \
+                    -d ${_mountpoint}/root/var/db/freebsd-update/ \
+                    install
+
+        fi
 
         echo
         echo "* Once finished don't forget to remove the snapshot!"
@@ -48,7 +56,7 @@ __update () {
 
 __upgrade () {
     local _dataset _jail_type _fulluuid _mountpoint _date _oldrelease
-    
+
     if [ ! -d ${iocroot}/download/${release} ] ; then
         echo "  ERROR: Release not found: ${release}"
         echo "  Please run iocage fetch first."
@@ -70,12 +78,12 @@ __upgrade () {
                   -s ${iocroot}/base/${release}/root/usr/src
         __chroot ${_dataset} newaliases
         if [ ${?} -eq 0 ] ; then
-            echo ""
+            echo
             echo "  Upgrade successful. Please restart jail and inspect."
             echo "  Remove ${_mountpoint}/root/etc.old if everything is OK."
             exit 0
         else
-            echo ""
+            echo
             echo "  Etcupdate failed! Backing out."
             __set__dataset_ioc_prop release="${_oldrelease}" ${_dataset}
             rm -rf ${_mountpoint}/root/etc
@@ -86,11 +94,11 @@ __upgrade () {
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _date=$(date "+%F_%T")
-    
-    echo "* creating back-out snapshot.."
+
+    echo "* Creating back-out snapshot..."
     __snapshot ${_dataset} ioc-upgrade_${_date}
 
-    echo "* Upgrading jail.."
+    echo "* Upgrading jail..."
 
     env UNAME_r=${_oldrelease} env PAGER="/bin/cat" \
         /usr/sbin/freebsd-update \
@@ -113,5 +121,5 @@ __upgrade () {
     __set_dataset_ioc_prop release="${release}" ${_dataset}
 
     echo
-    echo "* Once finished don't forget to remove the snapshot!"
+    echo "  REMINDER: Once finished don't forget to remove the snapshot!"
 }
