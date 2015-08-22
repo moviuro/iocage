@@ -12,7 +12,7 @@ __print_release () {
 
 # Print defaults set in this script.
 __print_defaults () {
-    local _CONF _prop _prop_name _saved_default
+    local _CONF _prop _value
 
     _CONF="${CONF_NET}
            ${CONF_JAIL}
@@ -22,17 +22,9 @@ __print_defaults () {
            ${CONF_SYNC}
            ${CONF_FTP}"
 
-    for _prop_name in ${_CONF} ; do
-        eval _prop="\$${_prop_name}"
-
-        if [ ! -z "${_prop}" ] ; then
-            _saved_default=$(__get_jail_prop ${_prop_name} default)
-            if [ "${_saved_default}" != "none" ] ; then
-                echo "${_prop_name}=${_saved_default}"
-            else
-                echo "${_prop_name}=${_prop}"
-            fi
-        fi
+    for _prop in ${_CONF} ; do
+        eval _value=\$${_prop}
+        echo "${_prop}=${_value}"
     done
 }
 
@@ -259,12 +251,16 @@ __list_releases () {
 }
 
 __print_disk () {
-    local _jails _jail _uuid _tag _crt _res _qta _use _ava
+    local _noheader _jails _jail _uuid _tag _crt _res _qta _use _ava
+
+    _noheader=${1}
 
     _jails=$(__find_jail ALL)
 
-    printf "%-36s  %s\n  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
-           "UUID" "TAG" "CRT" "RES" "QTA" "USE" "AVA"
+    if [ ${_noheader} -eq 0 ] ; then
+        printf "%-36s  %s\n  %-6s  %-5s  %-5s  %-5s  %-5s\n" \
+               "UUID" "TAG" "CRT" "RES" "QTA" "USE" "AVA"
+    fi
 
     for _jail in ${_jails} ; do
         _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
@@ -281,12 +277,16 @@ __print_disk () {
     done
 }
 
-__print_disk_parseable () {
-    local _ioc
+__print_disk_parsable () {
+    local _noheader _ioc
+
+    _noheader=${1}
 
     _ioc="org.freebsd.iocage"
 
-    echo "UUID CRT RES QTA USE AVA"
+    if [ ${_noheader} -eq 0 ] ; then
+        echo "UUID CRT RES QTA USE AVA"
+    fi
 
     zfs get -Hpo value -rd1 \
         ${_ioc}:host_hostuuid,compressratio,reservation,quota,used,available \
@@ -317,6 +317,7 @@ __find_mypool () {
 
         echo "Setting up zpool [${_pool}] for iocage usage..."
         echo "If you wish to change zpool, use 'iocage activate'"
+        __require_root
         __activate ${_pool}
     fi
 
@@ -399,6 +400,26 @@ __get_dataset_ioc_prop () {
     _dataset=${2}
 
     zfs get -Ho value org.freebsd.iocage:${_prop} ${_dataset}
+}
+
+__show () {
+    local _prop _jails _jail _uuid _tag _value
+
+    _prop=${1}
+
+    _jails=$(__find_jail ALL)
+
+    {
+        printf "%s^%s^%s\n" "UUID" "TAG" "${_prop}"
+
+        for _jail in ${_jails} ; do
+            _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+            _tag=$(__get_dataset_ioc_prop tag ${_jail})
+            _value=$(__get_jail_prop ${_prop} ${_jail})
+
+            printf "%s^%s^%s\n" "${_uuid}" "${_tag}" "${_value}"
+        done
+    } | column -ts^
 }
 
 __runtime () {

@@ -9,34 +9,42 @@ __parse_cmd () {
         shift
         case "${_cmd}" in
             activate)
+                __require_root
                 __cmd_activate "${@}"
                 exit
                 ;;
             cap)
+                __require_root
                 __cmd_cap "${@}"
                 exit
                 ;;
             chroot)
+                __require_root
                 __cmd_chroot "${@}"
                 exit
                 ;;
             clean)
+                __require_root
                 __cmd_clean "${@}"
                 exit
                 ;;
             clone)
+                __require_root
                 __cmd_clone "${@}"
                 exit
                 ;;
             console)
+                __require_root
                 __cmd_console "${@}"
                 exit
                 ;;
             create)
+                __require_root
                 __cmd_create "${@}"
                 exit
                 ;;
             deactivate)
+                __require_root
                 __cmd_deactivate "${@}"
                 exit
                 ;;
@@ -45,6 +53,7 @@ __parse_cmd () {
                 exit
                 ;;
             destroy)
+                __require_root
                 __cmd_destroy "${@}"
                 exit
                 ;;
@@ -53,14 +62,17 @@ __parse_cmd () {
                 exit
                 ;;
             exec)
+                __require_root
                 __cmd_exec "${@}"
                 exit
                 ;;
             export)
+                __require_root
                 __cmd_export "${@}"
                 exit
                 ;;
             fetch)
+                __require_root
                 __cmd_fetch "${@}"
                 exit
                 ;;
@@ -73,18 +85,22 @@ __parse_cmd () {
                 exit
                 ;;
             init-host)
+                __require_root
                 __cmd_init_host "${@}"
                 exit
                 ;;
             inuse)
+                __require_root
                 __cmd_inuse "${@}"
                 exit
                 ;;
             import)
+                __require_root
                 __cmd_import "${@}"
                 exit
                 ;;
             limits)
+                __require_root
                 __cmd_limits "${@}"
                 exit
                 ;;
@@ -93,46 +109,57 @@ __parse_cmd () {
                 exit
                 ;;
             package)
+                __require_root
                 __cmd_package "${@}"
                 exit
                 ;;
             promote)
+                __require_root
                 __cmd_promote "${@}"
                 exit
                 ;;
             rcboot)
+                __require_root
                 __cmd_rcboot
                 exit
                 ;;
             rcshutdown)
+                __require_root
                 __cmd_rcshutdown
                 exit
                 ;;
             reboot)
+                __require_root
                 __cmd_reboot "${@}"
                 exit
                 ;;
             record)
+                __require_root
                 __cmd_record "${@}"
                 exit
                 ;;
             reset)
+                __require_root
                 __cmd_reset "${@}"
                 exit
                 ;;
             restart)
+                __require_root
                 __cmd_restart "${@}"
                 exit
                 ;;
             rollback)
+                __require_root
                 __cmd_rollback "${@}"
                 exit
                 ;;
             runtime)
+                __require_root
                 __cmd_runtime "${@}"
                 exit
                 ;;
             set)
+                __require_root
                 __cmd_set "${@}"
                 exit
                 ;;
@@ -145,30 +172,37 @@ __parse_cmd () {
                 exit
                 ;;
             snapremove)
+                __require_root
                 __cmd_snapremove "${@}"
                 exit
                 ;;
             snapshot)
+                __require_root
                 __cmd_snapshot "${@}"
                 exit
                 ;;
             start)
+                __require_root
                 __cmd_start "${@}"
                 exit
                 ;;
             stop)
+                __require_root
                 __cmd_stop "${@}"
                 exit
                 ;;
             uncap)
+                __require_root
                 __cmd_uncap "${@}"
                 exit
                 ;;
             update)
+                __require_root
                 __cmd_update "${@}"
                 exit
                 ;;
             upgrade)
+                __require_root
                 __cmd_upgrade "${@}"
                 exit
                 ;;
@@ -347,16 +381,25 @@ __cmd_destroy () {
 }
 
 __cmd_df () {
-    local _flag _ioc
+    local _noheader _parsable _opt _ioc
 
-    _flag=${1}
+    _noheader=0
+    _parsable=0
 
-    if [ "${_flag}" == "-p" ] ; then
-        # Machine-parseable
-        __print_disk_parseable
+    while getopts ":Hp" _opt ; do
+        case ${_opt} in
+            "H") _noheader=1 ;;
+            "p") _parsable=1 ;;
+            "?") __fatal_error "Invalid command syntax." ;;
+        esac
+    done
+
+    if [ ${_parsable} -eq 1 ] ; then
+        # Machine-parsable
+        __print_disk_parsable ${_noheader}
     else
         # Human-readable
-        __print_disk
+        __print_disk ${_noheader}
     fi
 }
 

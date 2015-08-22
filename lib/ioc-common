@@ -23,9 +23,25 @@ __fatal_error () {
     exit 1
 }
 
+# Print an info message to stderr -------------------------------------
+#
+# ${1}: message to display
+__info () {
+    echo "  INFO: ${1}" 1>&2
+}
+
 # Print the number of parameters passed to this function ---------------
 __wc () {
     echo ${#}
+}
+
+# Require that we are being run as root --------------------------------
+#
+# If the user is not root, an error message is displayed and the program
+# exits with a nonzero exit code.
+__require_root () {
+    [ $(whoami) == "root" ] ||
+        __fatal_error "This command must be run as root."
 }
 
 # Require that a given value is a single word --------------------------

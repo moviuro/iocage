@@ -41,7 +41,7 @@ __reclone_basejail () {
     _OK="\e[32mOK\e[0m"
 
     _dataset=${1}
-    
+
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _jail_release=$(__get_dataset_ioc_prop release ${_dataset})
 
@@ -135,9 +135,13 @@ __create_jail () {
 
     # Write the default rc.conf to the jail, except for empty jails.
     if [ "${_flag}" != "-e" ] ; then
-        echo "hostname=\"${hostname}\"" > ${iocroot}/jails/${uuid}/root/etc/rc.conf
+        echo "hostname=\"${hostname}\"" \
+        > ${iocroot}/jails/${uuid}/root/etc/rc.conf
+
         __jail_rc_conf >> ${iocroot}/jails/${uuid}/root/etc/rc.conf
-        __resolv_conf ${_dataset} > ${iocroot}/jails/${uuid}/root/etc/resolv.conf
+
+        __resolv_conf ${_dataset} \
+        > ${iocroot}/jails/${uuid}/root/etc/resolv.conf
     else
         echo ${uuid}
     fi
@@ -198,7 +202,7 @@ __destroy_jail () {
 
     _dataset=${1}
     _force=${2}
-    
+
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     if __is_running ${_fulluuid} ; then
         if [ "${_force}" -eq 1 ] ; then
@@ -230,7 +234,7 @@ __destroy_all () {
     local _force _jails _jail
 
     _force=${1}
-    
+
     _jails=$(__find_jail ALL)
 
     echo "  Destroying all jails"
@@ -353,7 +357,8 @@ __check_filesystems () {
         zfs get -H creation ${pool}${_fs} > /dev/null 2>&1
         if [ ${?} -ne 0 ] ; then
             _missing=1
-            echo "  INFO: Creating ${pool}${_fs}"
+            __info "Creating ${pool}${_fs}"
+            __require_root
             zfs create -p ${pool}${_fs}
             zfs set mountpoint=${_fs} ${pool}${_fs}
             if [ ${_fs} == ${iocroot}/.defaults ] ; then
@@ -366,7 +371,11 @@ __check_filesystems () {
         zfs mount -a
     fi
 
-    mkdir -p ${iocroot}/tags
+    if [ ! -d ${iocroot}/tags ] ; then
+        __info "Creating ${iocroot}/tags"
+        __require_root
+        mkdir -p ${iocroot}/tags
+    fi
 }
 
 # Check that all our jails are compatible with this version of iocage.
@@ -436,6 +445,8 @@ __check_defaults_ioc_version () {
     _jail_version=$(__get_dataset_ioc_prop iocage_version ${_dataset})
 
     if [ "${_jail_version}" != "${iocage_version}" ] ; then
+        __info "Updating default iocage properties."
+        __require_root
         __update_defaults_ioc_properties
     fi
 }
@@ -449,8 +460,6 @@ __update_defaults_ioc_properties () {
     local _dataset _CONF _prop _value
 
     _dataset=${pool}/iocage/.defaults
-
-    echo "Updating default iocage properties" >&2
 
     _CONF="${CONF_RCTL}
            ${CONF_NET}
@@ -481,7 +490,7 @@ __update_dataset_ioc_properties () {
     _dataset=${1}
 
     _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-    echo "Updating iocage properties for ${_uuid}" >&2
+    __info "Updating iocage properties for ${_uuid}"
 
     _CONF="${CONF_RCTL}
            ${CONF_NET}
