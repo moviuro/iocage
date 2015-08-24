@@ -198,10 +198,16 @@ __clone_jail () {
 
 # Destroy jails --------------------------------------------------------------
 __destroy_jail () {
-    local _dataset _force _fulluuid _origin _jail_type
+    local _dataset _force _fulluuid _tag _origin _jail_type
 
     _dataset=${1}
     _force=${2}
+
+    if [ ${_dataset} = ${pool}/iocage/.defaults ] ; then
+        echo "  Destroying: user defaults"
+        zfs destroy -fr ${_dataset}
+        return
+    fi
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     if __is_running ${_fulluuid} ; then
@@ -212,10 +218,11 @@ __destroy_jail () {
         fi
     fi
 
+    _tag=$(__get_dataset_ioc_prop tag ${_dataset})
     _origin=$(__get_dataset_zfs_prop origin ${_dataset})
     _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
 
-    echo "  Destroying: ${_fulluuid}"
+    echo "  Destroying: ${_fulluuid} (${_tag})"
 
     __unlink_tag ${_dataset}
     zfs destroy -fr ${_dataset}
