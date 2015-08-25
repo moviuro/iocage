@@ -8,7 +8,8 @@ __get_next_mac () {
     _mac_offset=$(echo "obase=16; ${2}" | bc)
 
     _calc_mac=$(echo "obase=16; ibase=16; ${_mac_base} + ${_mac_offset}" | bc)
-    _mac_postfix=$(echo "${_calc_mac}" | awk '{ print substr($0, length($0)-5, length($0)) }')
+    _mac_postfix=$(echo "${_calc_mac}" \
+                   | awk '{ print substr($0, length($0)-5, length($0)) }')
     _mac="${mac_prefix}${_mac_postfix}"
 
     echo "${_mac}"
@@ -174,12 +175,14 @@ __get_autoip4 () {
     local _jail _jip4_prop _jip4_ifaddr _jip4 _autoip
 
     _autostart=$(__get_default_prop ip4_autostart)
-    __require_not_empty "${_autostart}" \
-                        "AUTOIP4 is specified, but ip4_autostart is not set!"
+    [ "${_autostart}" -gt 0 -a "${_autostart}" -lt 256 ] 2>/dev/null ||
+        __fatal_error "Invalid default for ip4_autostart: ${_autostart}
+         Please set a value within the range 0 < ip4_autostart < 256"
 
     _autoend=$(__get_default_prop ip4_autoend)
-    __require_not_empty "${_autoend}" \
-                        "AUTOIP4 is specified, but ip4_autoend is not set!"
+    [ "${_autoend}" -gt 0 -a "${_autoend}" -lt 256 ] 2>/dev/null ||
+        __fatal_error "Invalid default for ip4_autoend: ${_autoend}
+         Please set a value within the range 0 < ip4_autostart < 256"
 
     _autosubnet=$(__get_default_prop ip4_autosubnet)
     [ "${_autosubnet}" -gt 0 -a "${_autosubnet}" -le 32 ] 2>/dev/null ||
