@@ -516,16 +516,18 @@ PROPERTIES
          configure a default route inside a VNET jail.
 
      defaultrouter6=none | ip6address
-
          Setting this property to anything other than none will try to
          configure a default IPv6 route inside a VNET jail.
 
-     resolver=none | nameserver IP;nameserver IP;search domain.local
+     resolver=copy | none | nameserver IP;nameserver IP;search domain.local
          Sets the jail's resolver (resolv.conf).  Fields must be ; delimited
          which are translated to newlines in resolv.conf.
 
-         If the resolver is set to none (default) the jail will inherit the
+         If the resolver is set to "copy" (default), the jail will inherit the
          host's resolv.conf file.
+
+         If the resolver is set to "none", the jail's resolv.conf will not be
+         touched by iocage.
 
      ip6.addr, ip6.saddrsel, ip6
          A set of IPv6 options for the prison, the counterparts to ip4.addr,
