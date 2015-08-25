@@ -61,7 +61,7 @@ __require_single_word () {
 
     _value=${1}
     _description=${2:-"Invalid value"}
-    _words=$(__wc ${_value})
+    _words=$(__wc "${_value}")
 
     [ "${_words}" -eq 1 ] || __fatal_error "${_description}"
 }

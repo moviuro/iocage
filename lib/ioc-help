@@ -11,7 +11,7 @@ SYNOPSIS
             [ftpdir=path] [ftpfiles=list]
      iocage init-host host zpool
      iocage create [-b|-c|-e] [property=value]...
-     iocage clone uuid|tag[@snapshot] [property=value]...
+     iocage clone [-F] uuid|tag[@snapshot] [property=value]...
      iocage destroy [-f] uuid|tag|ALL
      iocage reset uuid|tag|ALL
      iocage list [-H] -r|[-btnl]
@@ -76,6 +76,16 @@ DESCRIPTION
      Properties are stored inside ZFS custom fields.  This eliminates the need
      for any configuration files and jails can be easily moved with ZFS send and
      receive preserving all of their properties automatically.
+
+     Additional filesystems can be mounted from the host into the jail using an
+     fstab file located in ${iocroot}/jails/UUID/fstab. This file is used as a
+     template to generate an fstab of additional mounts for the jail at runtime.
+     The special string %jailroot% can be used in the fstab file and will be
+     expanded to the path of the jail's root directory at the time the jail is
+     started. This allows the same fstab to be usable in different jails or when
+     the mountpoint of the jail changes due to changing the hack88 property.
+     Other than the %jailroot% template, the fstab file behaves according to the
+     format documented in fstab(5).
 
      iocage relies on ZFS and at least one ZFS pool must be present on the host
      system.  To enable all the features iocage supports, consider the following
@@ -162,12 +172,16 @@ DESCRIPTION
 
            # iocage create -b tag=mybasejail
 
-     clone uuid|tag[@snapshot] [property=value]...
+     clone [-t] uuid|tag[@snapshot] [property=value]...
 
          Clone the specified jail (ZFS clone).  All properties will be reset on
          the clone; defaults can be overridden by specifying properties on the
          fly.  Custom point-in-time snapshots can be used as a source for
-         cloning in the form of uuid@snapshot or tag@snapshot.
+         cloning in the form of uuid@snapshot or tag@snapshot. By default, the
+         fstab of the source jail will be backed up and replaced with a blank
+         fstab in the new jail.
+
+         -F     Keep the fstab of the old jail instead of replacing it.
 
          Examples:
 

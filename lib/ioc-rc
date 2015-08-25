@@ -57,6 +57,11 @@ __start_jail () {
     __update_mountpoint ${_dataset}
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
+    mkdir -p /tmp/iocage
+
+    sed -e "s|%jailroot%|${_mountpoint}/root|g" < ${_mountpoint}/fstab \
+        > /tmp/iocage/fstab.${_fulluuid}
+
     _procfs=$(__get_dataset_ioc_prop mount_procfs ${_dataset})
     if [ "${_procfs}" -eq 1 ] ; then
         mount -t procfs proc ${_mountpoint}/root/proc
@@ -197,7 +202,7 @@ __vnet_start () {
          exec.clean="$(__get_dataset_ioc_prop exec_clean ${_dataset})" \
          exec.timeout="$(__get_dataset_ioc_prop exec_timeout ${_dataset})" \
          stop.timeout="$(__get_dataset_ioc_prop stop_timeout ${_dataset})" \
-         mount.fstab="${_mountpoint}/fstab" \
+         mount.fstab="/tmp/iocage/fstab.${_uuid}" \
          mount.devfs="$(__get_dataset_ioc_prop mount_devfs ${_dataset})" \
          "${_fdescfs}" \
          allow.dying \
@@ -297,7 +302,7 @@ __legacy_start () {
          exec.clean="$(__get_dataset_ioc_prop exec_clean ${_dataset})" \
          exec.timeout="$(__get_dataset_ioc_prop exec_timeout ${_dataset})" \
          stop.timeout="$(__get_dataset_ioc_prop stop_timeout ${_dataset})" \
-         mount.fstab="${_mountpoint}/fstab" \
+         mount.fstab="/tmp/iocage/fstab.${_uuid}" \
          mount.devfs="$(__get_dataset_ioc_prop mount_devfs ${_dataset})" \
          "${_fdescfs}" \
          allow.dying \
@@ -395,7 +400,7 @@ __stop_jail () {
 
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
-    umount -afvF ${_mountpoint}/fstab > /dev/null 2>&1
+    umount -afvF /tmp/iocage/fstab.${_fulluuid} > /dev/null 2>&1
     umount ${_mountpoint}/root/dev/fd > /dev/null 2>&1
     umount ${_mountpoint}/root/dev    > /dev/null 2>&1
     umount ${_mountpoint}/root/proc   > /dev/null 2>&1

@@ -160,12 +160,14 @@ __create_jail () {
 
 # Cloning jails ----------------------------------------------------------
 __clone_jail () {
-    local _dataset _snapshot _zfsconfig _fs_list _fs _cfs
-    local _clone_dataset _mountpoint
+    local _switches _dataset _snapshot _zfsconfig _fs_list _fs _cfs \
+          _clone_dataset _mountpoint
 
-    _dataset=${1}
-    _snapshot=${2:-@${uuid}}
+    _switches=${1} # {keep props}{keep fstab}
+    _dataset=${2}
+    _snapshot=${3:-@${uuid}}
 
+    # TODO: Optionally copy transferrable properties from the source jail.
     _zfsconfig=$(__configure_jail generate)
     _fs_list=$(zfs list -rHo name ${_dataset})
 
@@ -187,10 +189,18 @@ __clone_jail () {
     __update_mountpoint ${_clone_dataset}
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_clone_dataset})
 
-    mv ${_mountpoint}/fstab ${_mountpoint}/fstab.${uuid}
-    touch ${_mountpoint}/fstab
+    # Optionally keep the fstab file in place, if asked to.
+    # _switches:
+    # {don't care}{keep fstab}
+    case ${_switches} in
+        # Not asked to keep fstab. Make a backup and create a new blank fstab.
+        ?0)
+            mv ${_mountpoint}/fstab ${_mountpoint}/fstab.${uuid}
+            touch ${_mountpoint}/fstab
+            ;;
+    esac
 
-    # TODO: Handle hack88 here.
+    # Update hostname in the clone's rc.conf to the new UUID.
     sed -E -e "s/[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}/${uuid}/g" \
         -i '' ${_mountpoint}/root/etc/rc.conf
 }

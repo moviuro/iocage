@@ -303,7 +303,21 @@ __cmd_clean () {
 }
 
 __cmd_clone () {
-    local _name _snapshot _dataset
+    local _props _fstab _opt _key _switches _name _snapshot _dataset
+
+    _props=0
+    _fstab=0
+
+    while getopts ":FP" _opt ; do
+        case ${_opt} in
+            "P") _props=1 ;;
+            "F") _fstab=1 ;;
+            ?) __fatal_error "Invalid option: -${OPTARG}" ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    _switches=${_props}${_fstab}
 
     _name=${1%%@*}
     __check_name "${_name}"
@@ -315,7 +329,7 @@ __cmd_clone () {
 
     shift
     __export_props "${@}"
-    __clone_jail ${_dataset} ${_snapshot%@}
+    __clone_jail ${_switches} ${_dataset} ${_snapshot%@}
 }
 
 __cmd_console () {
@@ -460,8 +474,7 @@ __cmd_fetch () {
     __require_single_word "${ftpproto}" "Invalid value for ftpproto."
 
     # ftphost can be empty for "file" proto
-    [ -z "${ftphost}" ] || \
-        __require_single_word "${ftphost}" "Invalid value for ftphost."
+    __require_single_word "${ftphost}" "Invalid value for ftphost."
 
     # ftpdir at least needs a "/" but we can accomodate spaces in the path
     __require_not_empty "${ftpdir}" "Missing value for ftpdir."
@@ -817,12 +830,12 @@ __cmd_snapshot () {
     __check_name "${_name}"
 
     _snapshot=${1#${_name}}
-    __require_single_word "${_snapshot%@}" "Invalid snapshot name: ${_snapshot}"
+    __require_single_word "${_snapshot#@}" "Invalid snapshot name: ${_snapshot}"
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
 
-    __snapshot ${_dataset} ${_snapshot%@}
+    __snapshot ${_dataset} ${_snapshot#@}
 }
 
 __cmd_start () {
