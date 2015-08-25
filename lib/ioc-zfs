@@ -140,8 +140,7 @@ __create_jail () {
 
         __jail_rc_conf >> ${iocroot}/jails/${uuid}/root/etc/rc.conf
 
-        __resolv_conf ${_dataset} \
-        > ${iocroot}/jails/${uuid}/root/etc/resolv.conf
+        __resolv_conf ${_dataset}
     else
         echo ${uuid}
     fi

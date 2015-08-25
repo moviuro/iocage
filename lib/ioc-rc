@@ -128,10 +128,7 @@ __start_jail () {
         zfs jail ioc-${_fulluuid} ${pool}/${_jzfs_dataset}
     fi
 
-    # TODO: if [ "${_resolver}" != "none" ]
-    #   The current behavior for "none" should be requested by resolver="auto".
-    #   Clobbering resolv.conf by default is not intuitive to most users.
-    __resolv_conf ${_dataset} > ${_mountpoint}/root/etc/resolv.conf
+    __resolv_conf ${_dataset}
 
     echo "[${_fulluuid}] Starting services"
     jexec ioc-${_fulluuid} $(__get_dataset_ioc_prop exec_start ${_dataset}) \
