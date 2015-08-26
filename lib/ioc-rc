@@ -420,7 +420,7 @@ __stop_jail () {
 }
 
 # Soft restart
-__restart_jail () {
+__soft_restart_jail () {
     local _dataset _fulluuid _exec_stop _exec_start _jid _tag _date
 
     _dataset=${1}
@@ -446,8 +446,8 @@ __restart_jail () {
     __set_dataset_ioc_prop last_started=${_date} ${_dataset}
 }
 
-# Hard reboot
-__reboot_jail () {
+# Hard restart
+__hard_restart_jail () {
     local _dataset
 
     _dataset=${1}
