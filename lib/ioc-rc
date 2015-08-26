@@ -446,8 +446,8 @@ __restart_jail () {
     __set_dataset_ioc_prop last_started=${_date} ${_dataset}
 }
 
-# Hard reboot
-__reboot_jail () {
+# Hard restart
+__restart_hard_jail () {
     local _dataset
 
     _dataset=${1}

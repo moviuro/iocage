@@ -16,8 +16,7 @@
 \fBiocage\fP \fIlist\fP [\fB-t\fP|\fB-r\fP]
 \fBiocage\fP \fIstart\fP UUID|TAG
 \fBiocage\fP \fIstop\fP UUID|TAG
-\fBiocage\fP \fIrestart\fP UUID|TAG
-\fBiocage\fP \fIreboot\fP UUID|TAG
+\fBiocage\fP \fIrestart\fP [\fB-H\fP] UUID|TAG
 \fBiocage\fP \fIrcboot\fP
 \fBiocage\fP \fIrcshutdown\fP
 \fBiocage\fP \fIconsole\fP UUID|TAG
@@ -263,24 +262,19 @@ latest updates applied.
 
 .fam T
 .fi
-\fIrestart\fP \fIUUID\fP|TAG
+\fIrestart\fP [\fB-H\fP] \fIUUID\fP|TAG
 .PP
 .nf
 .fam C
-    Soft restart jail. Soft method will restart the jail without destroying
-    the jail's networking and the jail process itself. All processes are
-    gracefully restarted inside the jail. Useful for quick and graceful
-    restarts.
+    Restart the jail identified by uuid or tag.
 
-.fam T
-.fi
-\fIrestart\fP \fIUUID\fP|TAG
-.PP
-.nf
-.fam C
-    Fully stop and restart the jail, the same as if `iocage stop` and `iocage
-    start` were executed separately.
+    This method will by default restart the jail without destroying the jail's
+    networking and the jail process itself.  All processes are gracefully
+    restarted inside the jail.  Soft restarting is quicker and more graceful
+    than a full stop and start.
 
+    -H    Hard restart.  Overrides the default behavior and instead fully stops
+          and, upon success, starts the jail.
 .fam T
 .fi
 \fIrcboot\fP

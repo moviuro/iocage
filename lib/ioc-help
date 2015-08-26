@@ -17,8 +17,7 @@ SYNOPSIS
      iocage list [-H] -r|[-btnl]
      iocage start uuid|tag
      iocage stop uuid|tag
-     iocage restart uuid|tag
-     iocage reboot uuid|tag
+     iocage restart [-H] uuid|tag
      iocage rcboot
      iocage rcshutdown
      iocage console uuid|tag
@@ -259,13 +258,17 @@ DESCRIPTION
 
          Stop the jail identified by uuid or tag.
 
-     restart uuid|tag
+     restart [-H] uuid|tag
 
-         Soft restart the jail identified by uuid or tag.  This method will
-         restart the jail without destroying the jail's networking and the jail
-         process itself.  All processes are gracefully restarted inside the
-         jail.  Soft restarting is quicker and more graceful than a full stop
-         and start.
+         Restart the jail identified by uuid or tag.
+
+         This method will by default restart the jail without destroying the
+         jail's networking and the jail process itself.  All processes are
+         gracefully restarted inside the jail.  Soft restarting is quicker and
+         more graceful than a full stop and start.
+
+         -H      Hard restart.  Overrides the default behavior and instead
+                 fully stops and, upon success, starts the jail.
 
      rcboot
 
