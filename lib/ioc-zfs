@@ -58,7 +58,7 @@ __reclone_basejail () {
             ${_dataset}/root/${_fs}
     done
 
-    echo "[${_fulluuid}] Re-cloning basejail ${_OK}"
+    echo -e "[${_fulluuid}] Re-cloning basejail ${_OK}"
 }
 
 # This creates jails ---------------------------------------------------
