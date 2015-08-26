@@ -730,9 +730,9 @@ __cmd_restart () {
     __check_dataset "${_dataset}" ${_name}
 
     if [ "${_hard}" -eq 0 ] ; then
-        __restart_jail ${_dataset}
+        __soft_restart_jail ${_dataset}
     else
-        __restart_hard_jail ${_dataset}
+        __hard_restart_jail ${_dataset}
     fi
 }
 
