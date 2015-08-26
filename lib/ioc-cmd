@@ -711,10 +711,12 @@ __cmd_reset () {
 }
 
 __cmd_restart () {
-    local _name _dataset _hard _opt
+    local _hard _opt _name _dataset
 
-    while getopts :H _opt; do
-        case $_opt in
+    _hard=0
+
+    while getopts ":H" _opt ; do
+        case ${_opt} in
             "H") _hard=1 ;;
             "?") __fatal_error "Invalid command syntax." ;;
         esac
@@ -727,7 +729,7 @@ __cmd_restart () {
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
 
-    if [ -z "$_hard" ]; then
+    if [ "${_hard}" -eq 0 ] ; then
         __restart_jail ${_dataset}
     else
         __restart_hard_jail ${_dataset}
