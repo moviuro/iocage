@@ -35,10 +35,7 @@ __create_basejail () {
 }
 
 __reclone_basejail () {
-    local _OK
     local _dataset _fulluuid _jail_release _fs
-
-    _OK="\e[32mOK\e[0m"
 
     _dataset=${1}
 
@@ -58,7 +55,7 @@ __reclone_basejail () {
             ${_dataset}/root/${_fs}
     done
 
-    echo -e "[${_fulluuid}] Re-cloning basejail ${_OK}"
+    echo -e "[${_fulluuid}] Re-cloning basejail ${OK}"
 }
 
 # This creates jails ---------------------------------------------------

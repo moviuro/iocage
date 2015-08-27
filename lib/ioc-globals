@@ -288,3 +288,27 @@ bdir_list="dev
            root
            proc
            mnt"
+
+# Detection of terminal support for colors.
+
+__term_supports_colors () {
+    local _colors _result
+
+    _colors=$(tput colors 2>/dev/null)
+
+    if [ -n "${_colors}" -a "${_colors}" -gt 2 ] ; then
+        _result=0 # true
+    else
+        _result=1 # false
+    fi
+
+    return ${_result}
+}
+
+if __term_supports_colors ; then
+    OK="\e[32mOK\e[0m"
+    FAILED="\e[31mFAILED\e[0m"
+else
+    OK="OK"
+    FAILED="FAILED"
+fi
