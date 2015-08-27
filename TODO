@@ -1,0 +1,8 @@
+TODO:
+* Look for more command parsers that could benefit from getopts.
+* Probably could clean up the root command check... but should I?
+* Add options for the clone sub-command to make it possible to keep
+  properties from the source.
+* Restructure the CONF_* property lists to allow separation between
+  .defaults-only properties and also unique jail-only properties.
+* Terminal color detection in lib/ioc-global to properly set OK and FAILED.
