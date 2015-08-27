@@ -307,7 +307,7 @@ __cmd_clone () {
         case ${_opt} in
             "P") _props=1 ;;
             "F") _fstab=1 ;;
-            ?) __fatal_error "Invalid option: -${OPTARG}" ;;
+            "?") __fatal_error "Invalid option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -362,7 +362,7 @@ __cmd_destroy () {
     while getopts ":f" _opt ; do
         case ${_opt} in
             "f") _force=1 ;;
-            ?) __fatal_error "Invalid command syntax!" ;;
+            "?") __fatal_error "Invalid command syntax!" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -426,10 +426,10 @@ __cmd_exec () {
     # check for -U or -u to pass to jexec
     OPTIND=1
     _jexecopts=""
-    while getopts u:U: _opt "${@}"; do
+    while getopts ":u:U:" _opt ; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}";;
-            ?)    __fatal_error "Invalid exec option: ${_opt}";;
+            "?")    __fatal_error "Invalid exec option: ${_opt}";;
         esac
     done
     shift $((OPTIND - 1))
@@ -438,7 +438,7 @@ __cmd_exec () {
     __check_name_all "${_name}"
     shift
 
-    if [ ${_name} == "ALL" ]; then
+    if [ ${_name} = "ALL" ]; then
         __exec_all ${_jexecopts} "${@}"
     else
         _dataset=$(__find_jail ${_name})
@@ -729,10 +729,10 @@ __cmd_restart () {
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
 
-    if [ "${_hard}" -eq 0 ] ; then
-        __soft_restart_jail ${_dataset}
-    else
+    if [ ${_hard} -eq 1 ] ; then
         __hard_restart_jail ${_dataset}
+    else
+        __soft_restart_jail ${_dataset}
     fi
 }
 

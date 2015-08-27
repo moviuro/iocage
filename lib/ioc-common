@@ -418,10 +418,10 @@ __exec () {
     _jexecopts=""
 
     # check for -U or -u to pass to jexec
-    while getopts u:U: _opt "${@}"; do
+    while getopts ":u:U:" _opt ; do
         case "${_opt}" in
-            [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}";;
-            ?)    __fatal_error "Invalid exec option: ${_opt}";;
+            [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}" ;;
+            "?")    __fatal_error "Invalid exec option: ${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -448,10 +448,10 @@ __exec_all () {
     _jexecopts=""
 
     # check for -U or -u to pass to jexec
-    while getopts u:U: _opt "${@}"; do
+    while getopts ":u:U:" _opt ; do
         case "${_opt}" in
-            [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}";;
-            ?)    __fatal_error "Invalid exec option: ${_opt}";;
+            [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}" ;;
+            "?")    __fatal_error "Invalid exec option: ${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
