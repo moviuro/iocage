@@ -44,44 +44,38 @@ __find_jail () {
 
     _name=${1}
 
-    if [ ${_name} == "default" ] ; then
-        echo "${pool}/iocage/.defaults"
-        return 0
-    fi
+    case "${_name}" in
+        "ALL") __find_jail_all ;;
+        "default") echo "${pool}/iocage/.defaults" ;;
+        *) __find_jail_by_name "${_name}" ;;
+    esac
+}
 
-    _jails=$(zfs list -rHo name ${pool}/iocage/jails \
-            | grep -E "^${pool}/iocage/jails/[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}$")
+__find_jail_all () {
+    local _uuid_regex
 
-    if [ ${_name} == "ALL" ] ; then
-        for _jail in ${_jails} ; do
-            echo ${_jail}
-        done
-        return 0
-    fi
+    _uuid_regex="[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}"
 
-    _jlist=""
-    _count=0
-    for _jail in ${_jails} ; do
-        _found=$(echo ${_jail} | grep -iEc "^${pool}/iocage/jails/${_name}")
+    zfs list -Hrd1 -o name ${pool}/iocage/jails \
+    | grep -E "^${pool}/iocage/jails/${_uuid_regex}$"
+}
 
-        if [ ${_found} -gt 0 ] ; then
-            : $((_count += _found))
-            _jlist=${_jail}
-            continue
-        fi
+__find_jail_by_name () {
+    local _name _ioc _uuid_regex _matches
 
-        _tag=$(__get_dataset_ioc_prop tag ${_jail})
+    _name=${1}
 
-        if [ "${_tag}" == "${_name}" ] ; then
-            : $((_count += 1))
-            _jlist=${_jail}
-        fi
-    done
+    _ioc="org.freebsd.iocage"
+    _uuid_regex="[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}"
+    _matches=$(zfs list -Hrd1 -o ${_ioc}:host_hostuuid,${_ioc}:tag \
+                   ${pool}/iocage/jails \
+               | awk -v name="^${_name}" -v valid_uuid="^${_uuid_regex}$" \
+                     '$1 ~ valid_uuid && $1 ~ name || $2 ~ name { print $1 }')
 
-    if [ ${_count} -eq 1 ] ; then
-        echo ${_jlist}
-    elif [ ${_count} -gt 1 ] ; then
+    if [ $(__wc ${_matches}) -gt 1 ] ; then
         echo "multiple"
+    else
+        echo ${_matches}
     fi
 }
 

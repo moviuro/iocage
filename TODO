@@ -5,4 +5,10 @@ TODO:
   properties from the source.
 * Restructure the CONF_* property lists to allow separation between
   .defaults-only properties and also unique jail-only properties.
-* Terminal color detection in lib/ioc-global to properly set OK and FAILED.
+* Figure out what the heck altroot support is for, if it's actually
+  practical, and how to achieve it without self-patching ioc-globals
+  if deemed legitimately useful.
+* Consolidate distributed ${iocroot} in fs lists to be simply part of
+  the loop.
+* Homogenize user message formatting. This should make writing helpers
+  for messaging easier.
