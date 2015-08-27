@@ -40,8 +40,12 @@ __wc () {
 # If the user is not root, an error message is displayed and the program
 # exits with a nonzero exit code.
 __require_root () {
+    local _message
+
+    _message=${1:-"This command must be run as root."}
+
     [ $(whoami) == "root" ] ||
-        __fatal_error "This command must be run as root."
+        __fatal_error "${_message}"
 }
 
 # Require that a given value is a single word --------------------------
