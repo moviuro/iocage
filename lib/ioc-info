@@ -40,7 +40,7 @@ __get_default_prop () {
 # Find and return the jail's top level ZFS dataset
 # Note: parameters are trusted to be valid
 __find_jail () {
-    local _name _jlist _jails _jail _found _tag _count
+    local _name
 
     _name=${1}
 
