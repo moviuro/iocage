@@ -12,6 +12,18 @@ __export_props () {
     done
 }
 
+# Echo to stderr -------------------------------------------------------
+__stderr () {
+    echo "${@}" >&2
+}
+
+# Print an error message to stderr -------------------------------------
+#
+# ${1}: error message to display
+__error () {
+    __stderr "  ERROR: ${1}"
+}
+
 # Print an error message to stderr and exit the current shell ----------
 #
 # General note: if a function is called in a subshell, exiting only
@@ -19,7 +31,7 @@ __export_props () {
 #
 # ${1}: error message to display before exiting
 __fatal_error () {
-    echo "  ERROR: ${1}" 1>&2
+    __error "${1}"
     exit 1
 }
 
@@ -27,7 +39,7 @@ __fatal_error () {
 #
 # ${1}: message to display
 __info () {
-    echo "  INFO: ${1}" 1>&2
+    __stderr "  INFO: ${1}"
 }
 
 # Print the number of parameters passed to this function ---------------
@@ -426,7 +438,7 @@ __exec () {
     while getopts ":u:U:" _opt ; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}" ;;
-            "?")    __fatal_error "Invalid exec option: ${OPTARG}" ;;
+            "?") __fatal_error "Invalid exec option: ${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -456,7 +468,7 @@ __exec_all () {
     while getopts ":u:U:" _opt ; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}" ;;
-            "?")    __fatal_error "Invalid exec option: ${OPTARG}" ;;
+            "?") __fatal_error "Invalid exec option: ${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -503,13 +515,13 @@ __fetch_release () {
 
     for _file in ${ftpfiles} ; do
         if [ -e "${_file}" ] ; then
-            echo "Extracting: ${_file}"
+            __info "Extracting ${_file}"
             chflags -R noschg ${iocroot}/releases/${release}/root
             tar -C ${iocroot}/releases/${release}/root -xf ${_file}
         fi
     done
 
-    echo "* Updating release to latest patch..."
+    __info "Updating release to latest patch"
     sleep 2
 
     if [ $(uname -U) -lt 1002000 ] ; then
@@ -518,7 +530,7 @@ __fetch_release () {
         _non_interactive="--not-running-from-cron"
     fi
 
-    _release_root=${iocroot}/iocage/releases/${release}/root
+    _release_root=${iocroot}/releases/${release}/root
 
     if [ -e ${_release_root}/etc/freebsd-update.conf ] ; then
 
@@ -543,9 +555,10 @@ __fetch_release () {
         mkdir ${iocroot}/log
     fi
 
+    __info "Copying release files to base jail"
+
     __create_basejail ${release}
 
-    echo -n "* Copying release files to base jail..."
     chflags -R noschg ${iocroot}/base/${release}/root
     tar --exclude \.zfs --exclude usr/sbin/chown \
         -C ${iocroot}/releases/${release}/root -cf - . \
@@ -559,5 +572,5 @@ __fetch_release () {
     etcupdate extract -D ${iocroot}/base/${release}/root \
               -s ${iocroot}/base/${release}/root/usr/src
 
-    echo " DONE"
+    __info "Fetch completed"
 }

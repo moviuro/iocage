@@ -23,15 +23,14 @@ __create_basejail () {
 
     _release=${1}
 
-    echo
-    echo -n "Creating basejail ZFS datasets..."
+    __stderr -n "  INFO: Creating basejail ZFS datasets..."
 
     for _fs in ${bfs_list} ; do
         zfs create -o compression=lz4 -p \
             ${pool}/iocage/base/${_release}/root/${_fs}
     done
 
-    echo " OK"
+    __stderr -e " ${OK}"
 }
 
 __reclone_basejail () {
@@ -45,18 +44,17 @@ __reclone_basejail () {
     zfs destroy -rRf ${pool}/iocage/base@${_fulluuid} 2>/dev/null
     zfs snapshot -r  ${pool}/iocage/base@${_fulluuid} 2>/dev/null
 
-    echo "[${_fulluuid}] Re-cloning basejail"
+    __stderr "[${_fulluuid}] Re-cloning basejail"
 
     # Re-clone required filesystems
     for _fs in ${bfs_list} ; do
-        # echo "  re-cloning: ${_dataset}/root/${_fs}"
         zfs destroy -f ${_dataset}/root/${_fs} 2>/dev/null
         zfs clone \
             ${pool}/iocage/base/${_jail_release}/root/${_fs}@${_fulluuid} \
             ${_dataset}/root/${_fs}
     done
 
-    echo -e "[${_fulluuid}] Re-cloning basejail ${OK}"
+    __stderr -e "[${_fulluuid}] Re-cloning basejail ${OK}"
 }
 
 # This creates jails ---------------------------------------------------
@@ -220,7 +218,7 @@ __destroy_jail () {
     _force=${2}
 
     if [ ${_dataset} = ${pool}/iocage/.defaults ] ; then
-        echo "  Destroying: user defaults"
+        __info "Destroying user defaults"
         zfs destroy -fr ${_dataset}
         return
     fi
@@ -238,17 +236,18 @@ __destroy_jail () {
     _origin=$(__get_dataset_zfs_prop origin ${_dataset})
     _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
 
-    echo "  Destroying: ${_fulluuid} (${_tag})"
+    __info "Destroying ${_fulluuid} (${_tag})"
 
     __unlink_tag ${_dataset}
     zfs destroy -fr ${_dataset}
 
     if [ "${_origin}" != "-" ] ; then
-        echo "  Destroying clone origin: ${_origin}"
+        __info "Destroying clone origin ${_origin}"
         zfs destroy -r ${_origin}
     fi
 
     if [ "${_jail_type}" == "basejail" ] ; then
+        __info "Destroying base snapshot @{_fulluuid}"
         zfs destroy -fr ${pool}/iocage/base@${_fulluuid}
     fi
 }
@@ -260,7 +259,7 @@ __destroy_all () {
 
     _jails=$(__find_jail ALL)
 
-    echo "  Destroying all jails"
+    __info "Destroying all jails"
 
     for _jail in ${_jails} ; do
         __destroy_jail ${_jail} ${_force}
@@ -285,7 +284,7 @@ __clean_all () {
     wait
 
     # Destroy the iocage dataset.
-    echo "  Destroying ${pool}/iocage"
+    __info "Destroying ${pool}/iocage"
     zfs destroy -rRf ${pool}/iocage
 }
 
@@ -330,13 +329,13 @@ __clean_releases () {
     # Destroy the releases and the bases created from them.
     #
 
-    echo "  Destroying ${pool}/iocage/base"
+    __info "Destroying ${pool}/iocage/base"
     zfs destroy -rRf ${pool}/iocage/base
 
-    echo "  Destroying ${pool}/iocage/downloaded"
+    __info "Destroying ${pool}/iocage/downloaded"
     zfs destroy -rRf ${pool}/iocage/download
 
-    echo "  Destroying ${pool}/iocage/releases"
+    __info "Destroying ${pool}/iocage/releases"
     zfs destroy -rRf ${pool}/iocage/releases
 }
 
@@ -356,11 +355,11 @@ __clean_jails () {
     wait
 
     # Destroy the jails dataset.
-    echo "  Destroying ${pool}/iocage/jails"
+    __info "Destroying ${pool}/iocage/jails"
     zfs destroy -rRf ${pool}/iocage/jails
 
     # Remove all the tag symlinks.
-    echo "  Removing symlinks in ${iocroot}/tags"
+    __info "Removing symlinks in ${iocroot}/tags"
     rm -f ${iocroot}/tags/*
 }
 
