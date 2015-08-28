@@ -231,8 +231,7 @@ __reset_jail_props () {
     iocset_ip4_autostart=$(__get_dataset_ioc_prop ip4_autostart ${_dataset})
     iocset_ip4_autoend=$(__get_dataset_ioc_prop ip4_autoend ${_dataset})
 
-    __configure_jail ${_dataset} ||
-        __fatal_error "A problem occurred while reconfiguring the jail."
+    __configure_jail ${_dataset}
 }
 
 __reset_jail_props_all () {
