@@ -46,7 +46,7 @@ __find_jail () {
 
     case "${_name}" in
         "ALL") __find_jail_all ;;
-        "default") echo "${pool}/iocage/.defaults" ;;
+        "default") echo ${pool}/iocage/.defaults ;;
         *) __find_jail_by_name "${_name}" ;;
     esac
 }
@@ -54,7 +54,7 @@ __find_jail () {
 __find_jail_all () {
     local _uuid_regex
 
-    _uuid_regex="^[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
+    _uuid_regex="[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
 
     zfs list -Hrd1 -o name ${pool}/iocage/jails | egrep "/${_uuid_regex}$"
 }
