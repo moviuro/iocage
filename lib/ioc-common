@@ -220,7 +220,7 @@ __require_dataset_not_multiple () {
     _name=${2:-"the given UUID or tag"}
     _description="Multiple matching UUIDs for ${_name}"
 
-    [ "${_value}" != "multiple" ] || __fatal_error "${_description}"
+    [ "${_dataset}" != "multiple" ] || __fatal_error "${_description}"
 }
 
 # Check the validity of the given UUID or tag --------------------------
@@ -346,7 +346,8 @@ __set_jail_prop () {
             __update_mountpoint ${_dataset}
             return
             ;;
-        *);;
+        *)
+            ;;
     esac
 
     _CONF="${CONF_NET}
