@@ -54,29 +54,29 @@ __find_jail () {
 __find_jail_all () {
     local _uuid_regex
 
-    _uuid_regex="[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}"
+    _uuid_regex="^[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
 
-    zfs list -Hrd1 -o name ${pool}/iocage/jails \
-    | grep -E "^${pool}/iocage/jails/${_uuid_regex}$"
+    zfs list -Hrd1 -o name ${pool}/iocage/jails | egrep "/${_uuid_regex}$"
 }
 
 __find_jail_by_name () {
-    local _name _ioc _uuid_regex _matches
+    local _name _ioc _uuid_regex _matched _count
 
     _name=${1}
 
     _ioc="org.freebsd.iocage"
-    _uuid_regex="[a-zA-Z0-9]{8,}-.*-.*-.*-[a-zA-Z0-9]{12,}"
-    _matches=$(zfs list -Hrd1 -o ${_ioc}:host_hostuuid,${_ioc}:tag \
+    _uuid_regex="[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
+    _matched=$(zfs list -Hrd1 -o ${_ioc}:host_hostuuid,${_ioc}:tag \
                    ${pool}/iocage/jails \
-               | awk -v name="^${_name}" -v valid_uuid="^${_uuid_regex}$" \
-                     '$1 ~ valid_uuid && $1 ~ name || $2 ~ name { print $1 }')
+               | egrep -w "${_uuid_regex}" \
+               | awk -v name="^${_name}" '$1 ~ name || $2 ~ name { print $1 }')
+    _count=$(__wc ${_matched})
 
-    if [ $(__wc ${_matches}) -gt 1 ] ; then
-        echo "multiple"
-    else
-        echo ${_matches}
-    fi
+    case ${_count} in
+        0) return 1 ;;
+        1) echo ${pool}/iocage/jails/${_matched} ;;
+        *) echo "multiple" ;;
+    esac
 }
 
 # List jails.
