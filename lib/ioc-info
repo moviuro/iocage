@@ -289,15 +289,16 @@ __print_disk_parsable () {
 }
 
 __find_mypool () {
-    local _found _pools _pool _mypool
+    local _found _pools _pool _mypool _altroot
 
     _found=0
     _pools=$(zpool list -Ho name)
 
     for _pool in ${_pools} ; do
         _mypool=$(__get_dataset_ioc_prop active ${_pool})
+        _altroot=$(zpool get -Ho value altroot ${_pool})
 
-        if [ "${_mypool}" == "yes" ] ; then
+        if [ "${_mypool}" = "yes" ] && [ "${_altroot}" = "-" ] ; then
             _found=1
             break
         fi
