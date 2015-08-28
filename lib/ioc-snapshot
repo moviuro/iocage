@@ -24,7 +24,7 @@ __snapremove () {
         _snapshots=$(zfs list -d1 -Hrt snapshot -o name ${_dataset})
         for _snap in ${_snapshots} ; do
             zfs destroy -r ${_snap}
-        done 
+        done
     else
         echo "* removing snapshot: ${_snapshot}"
         zfs destroy -r ${_dataset}@${_snapshot}

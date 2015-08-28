@@ -11,7 +11,7 @@ SYNOPSIS
             [ftpdir=path] [ftpfiles=list]
      iocage init-host host zpool
      iocage create [-b|-c|-e] [property=value]...
-     iocage clone [-F] uuid|tag[@snapshot] [property=value]...
+     iocage clone [-FP] uuid|tag[@snapshot] [property=value]...
      iocage destroy [-f] uuid|tag|ALL
      iocage reset uuid|tag|ALL
      iocage list [-H] -r|[-btnl]
@@ -171,7 +171,7 @@ DESCRIPTION
 
            # iocage create -b tag=mybasejail
 
-     clone [-t] uuid|tag[@snapshot] [property=value]...
+     clone [-FP] uuid|tag[@snapshot] [property=value]...
 
          Clone the specified jail (ZFS clone).  All properties will be reset on
          the clone; defaults can be overridden by specifying properties on the
@@ -182,6 +182,10 @@ DESCRIPTION
 
          -F     Keep the fstab of the old jail instead of replacing it.
 
+         -P     Set properties from the source jail instead of from the user
+                defaults dataset. The template property is always initialized to
+                "no" on the clone.
+
          Examples:
 
          Clone the current state of the jail tagged "www01" into a new jail with
@@ -190,9 +194,10 @@ DESCRIPTION
            # iocage clone www01 tag=www02
 
          Create a jail with the tag "www03", cloning from a previously created
-         snapshot named "fresh" taken of the jail tagged "www01":
+         snapshot named "fresh" taken of the jail tagged "www01" and keeping a
+         copy of the source jail's fstab in the clone:
 
-           # iocage clone www01@fresh tag=www03
+           # iocage clone -F www01@fresh tag=www03
 
      destroy [-f] uuid|tag|ALL
 

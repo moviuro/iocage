@@ -42,14 +42,15 @@ __reclone_basejail () {
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _jail_release=$(__get_dataset_ioc_prop release ${_dataset})
 
-    zfs destroy -rRf ${pool}/iocage/base@${_fulluuid}
-    zfs snapshot -r  ${pool}/iocage/base@${_fulluuid}
+    zfs destroy -rRf ${pool}/iocage/base@${_fulluuid} 2>/dev/null
+    zfs snapshot -r  ${pool}/iocage/base@${_fulluuid} 2>/dev/null
 
     echo "[${_fulluuid}] Re-cloning basejail"
 
     # Re-clone required filesystems
     for _fs in ${bfs_list} ; do
         # echo "  re-cloning: ${_dataset}/root/${_fs}"
+        zfs destroy -f ${_dataset}/root/${_fs} 2>/dev/null
         zfs clone \
             ${pool}/iocage/base/${_jail_release}/root/${_fs}@${_fulluuid} \
             ${_dataset}/root/${_fs}
@@ -73,7 +74,8 @@ __create_jail () {
         # Create a cloned jail.
         -c)
             _fs_list=$(zfs list -rHo name ${pool}/iocage/releases/${release})
-            _zfsconfig=$(__configure_jail generate)
+            _zfsconfig=$(__configure_jail generate) ||
+                __fatal_error "A problem occurred while configuring the jail."
 
             zfs snapshot -r ${pool}/iocage/releases/${release}@${uuid}
 
@@ -86,7 +88,8 @@ __create_jail () {
 
         # Create an empty jail.
         -e)
-            _zfsconfig=$(__configure_jail generate)
+            _zfsconfig=$(__configure_jail generate) ||
+                __fatal_error "A problem occurred while configuring the jail."
 
             eval "zfs create -p ${_zfsconfig} ${_dataset}"
             zfs create -p ${_dataset}/root
@@ -95,7 +98,8 @@ __create_jail () {
         # Create a basejail.
         -b)
             export type="basejail"
-            _zfsconfig=$(__configure_jail generate)
+            _zfsconfig=$(__configure_jail generate) ||
+                __fatal_error "A problem occurred while configuring the jail."
 
             zfs snapshot -r ${pool}/iocage/base@${uuid}
             eval "zfs create -p ${_zfsconfig} ${_dataset}"
@@ -121,7 +125,8 @@ __create_jail () {
             zfs destroy  -r ${pool}/iocage/releases/${release}@${uuid}
             zfs destroy  -r ${_dataset}@${uuid}
 
-            __configure_jail ${_dataset}
+            __configure_jail ${_dataset} ||
+                __fatal_error "A problem occurred while configuring the jail."
             ;;
     esac
 
@@ -164,8 +169,15 @@ __clone_jail () {
     _dataset=${2}
     _snapshot=${3:-@${uuid}}
 
-    # TODO: Optionally copy transferrable properties from the source jail.
-    _zfsconfig=$(__configure_jail generate)
+    # Get the configuration for this jail, either from defaults or the source.
+    # _switches: {keep props?}{don't care}
+    case ${_switches} in
+        # Use properties from the defaults.
+        0?) _zfsconfig=$(__configure_jail generate) ;;
+        1?) _zfsconfig=$(__configure_jail generate ${_dataset}) ;;
+    esac ||
+        __fatal_error "A problem occurred while configuring the jail."
+
     _fs_list=$(zfs list -rHo name ${_dataset})
 
     if ! zfs list ${_dataset}${_snapshot} >&- 2>&- ; then
@@ -187,8 +199,7 @@ __clone_jail () {
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_clone_dataset})
 
     # Optionally keep the fstab file in place, if asked to.
-    # _switches:
-    # {don't care}{keep fstab}
+    # _switches: {don't care}{keep fstab}
     case ${_switches} in
         # Not asked to keep fstab. Make a backup and create a new blank fstab.
         ?0)
@@ -291,7 +302,7 @@ __clean_releases () {
     # Create a regex for matching the running iocage jails. The resulting
     # string will have an extra | at the end which will need to be removed.
     _running=$(jls name \
-              | awk '/^ioc-/ { sub(/^ioc-/, "", $1); printf "%s|", $1 }')
+               | awk '/^ioc-/ { sub(/^ioc-/, "", $1); printf "%s|", $1 }')
 
     # Create a list of running clones by listing jail datasets alongside their
     # origin and matching the origin against the datasets to be removed as well
@@ -300,13 +311,13 @@ __clean_releases () {
     # unique datasets by splitting the dataset name into parts and only
     # printing the UUID portion, then piping through uniq.
     _clones=$(zfs list -Hrd3 -o name,origin ${pool}/iocage/jails \
-             | awk -v origins="^${pool}/iocage/(releases|base)/" \
-                   -v running="${_running%|}" \
-                   '$2 ~ origins && $1 ~ running {
-                      split($1, name, "/");
-                      print name[4];
-                    }' \
-             | uniq)
+              | awk -v origins="^${pool}/iocage/(releases|base)/" \
+                    -v running="${_running%|}" \
+                    '$2 ~ origins && $1 ~ running {
+                       split($1, name, "/");
+                       print name[4];
+                     }' \
+              | uniq)
 
     # Stop running jails in parallel.
     for _uuid in ${_clones} ; do

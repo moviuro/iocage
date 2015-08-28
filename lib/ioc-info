@@ -409,7 +409,8 @@ __show () {
         for _jail in ${_jails} ; do
             _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
             _tag=$(__get_dataset_ioc_prop tag ${_jail})
-            _value=$(__get_jail_prop ${_prop} ${_jail})
+            _value=$(__get_jail_prop ${_prop} ${_jail}) ||
+                __fatal_error "Aborting."
 
             printf "%s^%s^%s\n" "${_uuid}" "${_tag}" "${_value}"
         done

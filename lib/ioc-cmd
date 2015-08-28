@@ -811,13 +811,13 @@ __cmd_snapremove () {
     __check_name "${_name}"
 
     _snapshot=${1#${_name}}
-    __require_not_empty "${_snapshot%@}" "Missing snapshot name!"
-    __require_single_word "${_snapshot%@}" "Invalid snapshot name: ${_snapshot}"
+    __require_not_empty "${_snapshot#@}" "Missing snapshot name!"
+    __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot#@}"
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
 
-    __snapremove ${_dataset} ${_snapshot%@}
+    __snapremove ${_dataset} ${_snapshot#@}
 }
 
 __cmd_snapshot () {
@@ -827,7 +827,7 @@ __cmd_snapshot () {
     __check_name "${_name}"
 
     _snapshot=${1#${_name}}
-    __require_single_word "${_snapshot#@}" "Invalid snapshot name: ${_snapshot}"
+    __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot#@}"
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
