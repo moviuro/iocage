@@ -379,6 +379,30 @@ __get_jail_prop () {
         __fatal_error "Unsupported property: ${_property}"
 }
 
+__get_all_prop () {
+    local _noheader _prop _jails _capsprop _jail _uuid _value
+
+    _noheader=${1}
+    _prop=${2}
+
+    _jails=$(__find_jail ALL)
+
+    {
+        if [ ${_noheader} -eq 0 ] ; then
+            _capsprop=$(echo ${_prop} | tr 'a-z' 'A-Z')
+            printf "%s^%s\n" "UUID" "${_capsprop}"
+        fi
+
+        for _jail in ${_jails} ; do
+            _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
+            _value=$(__get_jail_prop ${_prop} ${_jail}) ||
+                __fatal_error "Aborting."
+
+            printf "%s^%s\n" "${_uuid}" "${_value}"
+        done
+    } | column -ts^
+}
+
 __get_dataset_zfs_prop () {
     local _prop _dataset
 

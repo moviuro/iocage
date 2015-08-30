@@ -9,3 +9,4 @@ TODO:
 * Support using a different pool for jail_zfs_dataset. This will be a
   breaking change, or it will ugly for the sake of being compatible with
   the current behavior. :(
+* Look more into altroot support.
