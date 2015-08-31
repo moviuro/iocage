@@ -268,21 +268,23 @@ CONF_SYNC="sync_state
 CONF_FTP="ftpproto ftphost ftpdir ftpfiles"
 
 # Basejail filesystems
-bfs_list="bin
-          boot
-          lib
-          libexec
-          rescue
-          sbin
-          usr/bin
-          usr/include
-          usr/lib
-          usr/libexec
-          usr/sbin
-          usr/share
-          usr/src
-          usr/libdata
-          usr/lib32"
+bfs_list_i386="bin
+               boot
+               lib
+               libexec
+               rescue
+               sbin
+               usr/bin
+               usr/include
+               usr/lib
+               usr/libexec
+               usr/sbin
+               usr/share
+               usr/src
+               usr/libdata"
+
+bfs_list_amd64="${bfs_list_i386}
+                usr/lib32"
 
 # Basejail directories
 bdir_list="dev

@@ -19,13 +19,16 @@ __deactivate () {
 }
 
 __create_basejail () {
-    local _release _fs
+    local _release _jail_arch _bfs_list _fs
 
     _release=${1}
+    _jail_arch=$(__get_default_prop arch)
+
+    eval _bfs_list='$bfs_list_'${_jail_arch}
 
     __stderr -n "  INFO: Creating basejail ZFS datasets..."
 
-    for _fs in ${bfs_list} ; do
+    for _fs in ${_bfs_list} ; do
         zfs create -o compression=lz4 -p \
             ${pool}/iocage/base/${_release}/root/${_fs}
     done
@@ -34,12 +37,15 @@ __create_basejail () {
 }
 
 __reclone_basejail () {
-    local _dataset _fulluuid _jail_release _fs
+    local _dataset _fulluuid _jail_release _jail_arch _bfs_list _fs
 
     _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _jail_release=$(__get_dataset_ioc_prop release ${_dataset})
+    _jail_arch=$(__get_dataset_ioc_prop arch ${_dataset})
+
+    eval _bfs_list='$bfs_list_'${_jail_arch}
 
     __stderr "[${_fulluuid}] Re-creating base snapshot"
 
@@ -50,7 +56,7 @@ __reclone_basejail () {
     __stderr "[${_fulluuid}] Re-cloning base filesystems"
 
     # Re-clone required filesystems
-    for _fs in ${bfs_list} ; do
+    for _fs in ${_bfs_list} ; do
         zfs destroy -f ${_dataset}/root/${_fs} 2>/dev/null
         zfs clone \
             ${pool}/iocage/base/${_jail_release}/root/${_fs}@${_fulluuid} \
@@ -62,7 +68,7 @@ __reclone_basejail () {
 
 # This creates jails ---------------------------------------------------
 __create_jail () {
-    local _flag _dataset _fs_list _zfsconfig _fs _dir
+    local _flag _dataset _fs_list _zfsconfig _fs _dir _jail_arch _bfs_list
 
     zfs list -r ${pool}/iocage/releases | grep -q ${release} ||
         __fatal_error "Release ${release} not found locally, run fetch first."
@@ -99,6 +105,10 @@ __create_jail () {
         # Create a basejail.
         -b)
             export type="basejail"
+            _jail_arch=$(__get_default_prop arch)
+
+            eval _bfs_list='$bfs_list_'${_jail_arch}
+
             _zfsconfig=$(__configure_jail generate) ||
                 __fatal_error "A problem occurred while configuring the jail."
 
@@ -106,7 +116,7 @@ __create_jail () {
             eval "zfs create -p ${_zfsconfig} ${_dataset}"
             zfs create -o compression=lz4 -p ${_dataset}/root/usr
 
-            for _fs in ${bfs_list} ; do
+            for _fs in ${_bfs_list} ; do
                 zfs clone -o compression=lz4 -o readonly=on \
                     ${pool}/iocage/base/${release}/root/${_fs}@${uuid} \
                     ${_dataset}/root/${_fs}
