@@ -250,7 +250,7 @@ __destroy_jail () {
     fi
 
     if [ "${_jail_type}" == "basejail" ] ; then
-        __info "Destroying base snapshot @{_fulluuid}"
+        __info "Destroying base snapshot ${_fulluuid}"
         zfs destroy -fr ${pool}/iocage/base@${_fulluuid}
     fi
 }
