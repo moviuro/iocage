@@ -26,23 +26,23 @@ priority.
 
 - **IRC**: For general iocage discussion, [Freenode #iocage](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23iocage)
 
-**CURRENT GOALS:**
+**CURRENT GOALS**
 - Enhance iocage with more zfs-like functionality, syntax
 - Find and handle catastrophic edge cases
 - Prefer excess of understandable functions over few, unreasonably complex ones
 - Avoid wasteful overhead, use of global state
 - Track useful features from upstream
 
-**FUTURE IDEAS:**
+**FUTURE IDEAS**
 - Extend the basejail concept to allow for specifying a custom base
 - Hierarchical jails, layering/inheritance
 - Consolidate redundant documentation files
 - Test suite for proving correctness
 
-**NON-GOALS:**
+**NON-GOALS**
 - Git integration for iocage
 
-**FEATURES:**
+**FEATURES**
 - Templates, clones, basejails, fully independent jails
 - Ease of use
 - Zero configuration files
@@ -75,7 +75,7 @@ priority.
 - Various bug fixes
 - And more! :)
 
-**QUICK HOWTO:**
+**QUICK HOWTO**
 
 Fetch a release:
 
