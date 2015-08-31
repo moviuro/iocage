@@ -1,19 +1,46 @@
-iocage
-======
+iocage (experimental)
+=====================
 
 **A FreeBSD jail manager.**
 
 iocage is a zero dependency, drop in jail/container manager amalgamating some
 of the best features and technologies the FreeBSD operating system has to offer.
-It is geared for ease of use with a simple and easy to understand command syntax.
+It is geared for ease of use with a simple and easy to understand command
+syntax.
 
-iocage is in the FreeBSD ports tree as sysutils/iocage.
-To install using binary packages, simply run: `pkg install iocage`
+This fork is focused on code quality and correctness. A major cleanup of the
+upstream code base was performed to make iocage more pleasant to work on. By
+enforcing more consistent style and naming conventions, making functions more
+concise and easier to reason about, and introducing a separation between user
+interfaces and the implementation of functionality, this fork makes new features
+easier to introduce.
 
-- **[DOCUMENTATION](http://iocage.readthedocs.org/en/latest/index.html)**
-- **IRC**: [Freenode #iocage](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23iocage)
-- **Mailing list**: iocage@googlegroups.com
-- **Contributing**: If you would like to submit a pull request, we kindly ask you to open it against the `develop` branch.
+Users should be aware that this repository is at times experimental. Testing and
+bug reports are very welcome. The documentation is unfortunately difficult to
+maintain. Currently the `iocage help` documentation is the most accurate.
+
+The jail formats of this fork and upstream iocage are basically compatible, but
+the command line interfaces are diverging. The goals of enhancing our jail
+format and command line interface mean that upstream compatibility takes a lower
+priority.
+
+- **IRC**: For general iocage discussion, [Freenode #iocage](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23iocage)
+
+**CURRENT GOALS:**
+- Enhance iocage with more zfs-like functionality, syntax
+- Find and handle catastrophic edge cases
+- Prefer excess of understandable functions over few, unreasonably complex ones
+- Avoid wasteful overhead, use of global state
+- Track useful features from upstream
+
+**FUTURE IDEAS:**
+- Extend the basejail concept to allow for specifying a custom base
+- Hierarchical jails, layering/inheritance
+- Consolidate redundant documentation files
+- Test suite for proving correctness
+
+**NON-GOALS:**
+- Git integration for iocage
 
 **FEATURES:**
 - Templates, clones, basejails, fully independent jails
@@ -32,6 +59,22 @@ To install using binary packages, simply run: `pkg install iocage`
 - Export and import
 - And many more!
 
+**ADDITIONAL ENHANCEMENTS**
+- Concurrent startup and shutdown of jails by rcboot and rcshutdown, based on
+  the priority of the jail
+- Improved error messages
+- Getopts option parsing for more flexible and familiar operation
+- Versioned jail format for keeping jail properties compatible with iocage
+- Prefix matching for tags in addition to UUIDs
+- A user property is used for pool activation rather than hijacking the comment
+- An alternate pool may be specified for jail_zfs_dataset with the jail_zfs_pool
+  property
+- The fstab for jails offers `%jailroot%` as a placeholder for the root path of
+  a jail
+- Helpful comments in the code
+- Various bug fixes
+- And more! :)
+
 **QUICK HOWTO:**
 
 Fetch a release:
@@ -46,46 +89,6 @@ Start the jail:
 
 `iocage start myjail`
 
-**USAGE:**
--  iocage activate ZPOOL
--  iocage fetch [release=RELEASE | ftphost=ftp.hostname.org | ftpdir=/dir/ | ftpfiles="base.txz doc.txz lib32.txz src.txz"]
--  iocage create [-b|-c|-e] [release=RELEASE] [pkglist=file] [property=value]
--  iocage clone UUID|TAG@snapshot [property=value]
--  iocage destroy [-f] UUID|TAG|ALL
--  iocage reset UUID|TAG|ALL
--  iocage list [-t|-r]
--  iocage start UUID|TAG
--  iocage stop UUID|TAG
--  iocage restart UUID|TAG
--  iocage rcboot
--  iocage rcshutdown
--  iocage console UUID|TAG
--  iocage exec [-u username | -U username] UUID|TAG command [arg ...]
--  iocage chroot UUID|TAG [command]
--  iocage df
--  iocage show property
--  iocage get property|all UUID|TAG
--  iocage set property=value UUID|TAG
--  iocage cap UUID|TAG
--  iocage limits UUID|TAG
--  iocage uncap UUID|TAG
--  iocage inuse [UUID|TAG]
--  iocage snapshot UUID|TAG@snapshotname
--  iocage snaplist UUID|TAG
--  iocage snapremove UUID|TAG@snapshotname|ALL
--  iocage rollback UUID|TAG@snapshotname
--  iocage promote UUID|TAG
--  iocage runtime UUID|TAG
--  iocage update UUID|TAG
--  iocage upgrade UUID|TAG
--  iocage record start|stop UUID|TAG
--  iocage package UUID|TAG
--  iocage export UUID|TAG
--  iocage import UUID [property=value]
--  iocage defaults
--  iocage version | --version
--  iocage help
-
 **REQUIREMENTS**
 - FreeBSD 9.3-RELEASE amd64 or newer
 - ZFS file system
@@ -99,16 +102,19 @@ Start the jail:
         options         RCTL   # same as above
 
 **OTHER CONSIDERATIONS**
+- Documentation needs work, currently `iocage help`is the most maintained
+  reference
 - For resource limiting please read rctl(8)
 - For the explanations on jail properties read jail(8)
 - Create bridge0 and bridge1 interfaces
 
 **HINTS**
 - Use iocage set/get to modify properties
-- To understand what most properties do read iocage(8).
+- To understand what most properties do read `iocage help`.
 - If using VNET consider adding the following to `/etc/sysctl.conf` on the host:
 
         net.inet.ip.forwarding=1       # Enable IP forwarding between interfaces
-        net.link.bridge.pfil_onlyip=0  # Only pass IP packets when pfil is enabled
+        net.link.bridge.pfil_onlyip=0  # Only pass IP packets when pfil is
+                                       # enabled
         net.link.bridge.pfil_bridge=0  # Packet filter on the bridge interface
         net.link.bridge.pfil_member=0  # Packet filter on the member interface
