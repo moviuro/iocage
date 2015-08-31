@@ -1,7 +1,7 @@
 iocage (experimental)
 =====================
 
-**A FreeBSD jail manager.**
+**A FreeBSD Jail Manager**
 
 iocage is a zero dependency, drop in jail/container manager amalgamating some
 of the best features and technologies the FreeBSD operating system has to offer.
@@ -110,7 +110,7 @@ Start the jail:
 
 **HINTS**
 - Use iocage set/get to modify properties
-- To understand what most properties do read `iocage help`.
+- To understand what most properties do read `iocage help`
 - If using VNET consider adding the following to `/etc/sysctl.conf` on the host:
 
         net.inet.ip.forwarding=1       # Enable IP forwarding between interfaces
