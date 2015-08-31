@@ -28,6 +28,7 @@ priority.
 
 **CURRENT GOALS**
 - Enhance iocage with more zfs-like functionality, syntax
+- Improve portability of jails across hosts
 - Find and handle catastrophic edge cases
 - Prefer excess of understandable functions over few, unreasonably complex ones
 - Avoid wasteful overhead, use of global state
