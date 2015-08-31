@@ -394,7 +394,7 @@ __check_filesystems () {
             _missing=1
             __info "Creating ${pool}${_fs}"
             __require_root \
-                "Please run iocage as root to create missing datasets."
+                "Please run iocage once as root to create missing datasets."
             zfs create -p ${pool}${_fs}
             zfs set mountpoint=${_fs} ${pool}${_fs}
             if [ ${_fs} = ${iocroot}/.defaults ] ; then
@@ -410,7 +410,7 @@ __check_filesystems () {
     if [ ! -d ${iocroot}/tags ] ; then
         __info "Creating ${iocroot}/tags"
         __require_root \
-            "Please run iocage as root to create missing directories."
+            "Please run iocage once as root to create missing directories."
         mkdir -p ${iocroot}/tags
     fi
 }
@@ -446,6 +446,10 @@ __check_all_ioc_version () {
                          | awk -v version="${iocage_version}" \
                                'BEGIN { gsub(/[()]/, "\\\\&", version) }
                                 FNR > 1 && $0 !~ version { print $1 }')
+
+    [ $(__wc ${_mismatches}) -eq 0 ] ||
+        __require_root \
+            "Please run iocage once as root to update jail properties."
 
     for _jail in ${_mismatches} ; do
         __update_dataset_ioc_properties ${_jail} &
@@ -484,7 +488,7 @@ __check_defaults_ioc_version () {
     if [ "${_jail_version}" != "${iocage_version}" ] ; then
         __info "Updating default iocage properties."
         __require_root \
-            "Please run iocage as root to update default iocage properties."
+            "Please run iocage once as root to update default properties."
         __update_defaults_ioc_properties
     fi
 }
