@@ -20,13 +20,13 @@ __snapremove () {
     _dataset=${1}
     _snapshot=${2}
 
-    if [ ${_snapshot} == "ALL" ] ; then
-        _snapshots=$(zfs list -d1 -Hrt snapshot -o name ${_dataset})
+    if [ ${_snapshot} = "ALL" ] ; then
+        _snapshots=$(zfs list -Hrd1 -t snapshot -o name ${_dataset})
         for _snap in ${_snapshots} ; do
             zfs destroy -r ${_snap}
         done
     else
-        echo "* removing snapshot: ${_snapshot}"
+        __info "Removing snapshot: @${_snapshot}"
         zfs destroy -r ${_dataset}@${_snapshot}
     fi
 }
@@ -36,19 +36,21 @@ __snaplist () {
 
     _dataset=${1}
 
-    _snapshots=$(zfs list -Hrt snapshot -d1 -o name ${_dataset})
+    _snapshots=$(zfs list -Hrd1 -t snapshot -o name ${_dataset})
 
-    printf "%-36s  %-21s  %s   %s\n" "NAME" "CREATED" "RSIZE" "USED"
+    {
+        printf "%s^%s^%s^%s\n" "NAME" "CREATED" "RSIZE" "USED"
 
-    for _snap in ${_snapshots} ; do
-        _snapshot=${_snap#*@}
-        _creation=$(__get_dataset_zfs_prop creation ${_snap})
-        _used=$(__get_dataset_zfs_prop used ${_snap})
-        _referenced=$(__get_dataset_zfs_prop referenced ${_snap})
+        for _snap in ${_snapshots} ; do
+            _snapshot=${_snap#*@}
+            _creation=$(__get_dataset_zfs_prop creation ${_snap})
+            _used=$(__get_dataset_zfs_prop used ${_snap})
+            _referenced=$(__get_dataset_zfs_prop referenced ${_snap})
 
-        printf "%-36s  %-21s  %s    %s\n" \
-               "${_snapshot}" "${_creation}" "${_referenced}" "${_used}"
-    done
+            printf "%s^%s^%s^%s\n" \
+                   "@${_snapshot}" "${_creation}" "${_referenced}" "${_used}"
+        done
+    } | column -ts^
 }
 
 __rollback () {
@@ -56,29 +58,29 @@ __rollback () {
 
     _dataset=${1}
     _snapshot=${2}
-    
-    _fs_list=$(zfs list -rHo name ${_dataset})
+
+    _fs_list=$(zfs list -Hro name ${_dataset})
     for _fs in ${_fs_list} ; do
-        echo "* Rolling back to ${_fs}@${_snapshot}"
+        __info "Rolling back to ${_fs}@${_snapshot}"
         zfs rollback -r ${_fs}@${_snapshot}
     done
 }
 
 __promote () {
     local _dataset _fs_list _fs _origin
-    
+
     _dataset=${1}
-    
-    _fs_list=$(zfs list -rHo name ${_dataset})
+
+    _fs_list=$(zfs list -Hro name ${_dataset})
 
     for _fs in ${_fs_list} ; do
         _origin=$(__get_dataset_zfs_prop origin ${_fs})
 
         if [ "${_origin}" != "-" ] ; then
-            echo "* promoting filesystem: ${_fs}"
+            __info "Promoting filesystem: ${_fs}"
             zfs promote ${_fs}
         else
-            echo "  INFO: filesystem ${_fs} is not a clone"
+            __info "Filesystem ${_fs} is not a clone"
         fi
     done
 }

@@ -318,13 +318,14 @@ __cmd_clone () {
     __check_name "${_name}"
 
     _snapshot=${1#${_name}}
+    _snapshot=${_snapshot#@} # Remove leading @ (separate step in case no @)
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
 
     shift
     __export_props "${@}"
-    __clone_jail ${_switches} ${_dataset} ${_snapshot%@}
+    __clone_jail ${_switches} ${_dataset} ${_snapshot}
 }
 
 __cmd_console () {
@@ -757,13 +758,14 @@ __cmd_rollback () {
     __check_name "${_name}"
 
     _snapshot=${1#${_name}}
-    __require_not_empty "${_snapshot%@}" "Missing snapshot name!"
-    __require_single_word "${_snapshot%@}" "Invalid snapshot name: ${_snapshot}"
+    _snapshot=${_snapshot#@} # Remove leading @ (separate step in case no @)
+    __require_not_empty "${_snapshot}" "Missing snapshot name!"
+    __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot}"
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
 
-    __rollback ${_dataset} ${_snapshot%@}
+    __rollback ${_dataset} ${_snapshot}
 }
 
 __cmd_runtime () {
@@ -825,13 +827,14 @@ __cmd_snapremove () {
     __check_name "${_name}"
 
     _snapshot=${1#${_name}}
-    __require_not_empty "${_snapshot#@}" "Missing snapshot name!"
-    __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot#@}"
+    _snapshot=${_snapshot#@} # Remove leading @ (separate step in case no @)
+    __require_not_empty "${_snapshot}" "Missing snapshot name!"
+    __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot}"
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
 
-    __snapremove ${_dataset} ${_snapshot#@}
+    __snapremove ${_dataset} ${_snapshot}
 }
 
 __cmd_snapshot () {
@@ -841,12 +844,13 @@ __cmd_snapshot () {
     __check_name "${_name}"
 
     _snapshot=${1#${_name}}
-    __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot#@}"
+    _snapshot=${_snapshot#@} # Remove leading @ (separate step in case no @)
+    __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot}"
 
     _dataset=$(__find_jail ${_name})
     __check_dataset "${_dataset}" ${_name}
 
-    __snapshot ${_dataset} ${_snapshot#@}
+    __snapshot ${_dataset} ${_snapshot}
 }
 
 __cmd_start () {
