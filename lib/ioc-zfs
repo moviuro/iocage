@@ -215,7 +215,7 @@ __clone_jail () {
 
 # Destroy jails --------------------------------------------------------------
 __destroy_jail () {
-    local _dataset _force _fulluuid _tag _origin _jail_type
+    local _dataset _force _clones _clone _fulluuid _tag _origin _jail_type
 
     _dataset=${1}
     _force=${2}
@@ -226,9 +226,19 @@ __destroy_jail () {
         return
     fi
 
+    # Check for clones of this jail.
+    _clones=$(zfs list -Hrd1 -t snapshot -o clones ${_dataset})
+    for _clone in ${_clones} ; do
+        _tag=$(__get_dataset_ioc_prop tag ${_clone})
+        _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_clone})
+        __error "Dependent clone: ${_fulluuid} (${_tag})"
+    done
+    [ $(__wc ${_clones}) -eq 0 ] ||
+        __fatal_error "Cannot destroy jail with dependent clones."
+
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     if __is_running ${_fulluuid} ; then
-        if [ "${_force}" -eq 1 ] ; then
+        if [ ${_force} -eq 1 ] ; then
             __stop_jail ${_dataset}
         else
             __fatal_error "Jail is still up and running (use -f to force)!"
