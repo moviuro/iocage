@@ -198,7 +198,7 @@ __list_jails () {
     } | column -ts^ # Make a nice table with aligned columns.
 }
 
-__show_non_ioc_jails () {
+__list_non_ioc_jails () {
     local _noheader _non_ioc_jids _jid _path _ip4 _host_hostname
 
     _noheader=${1}

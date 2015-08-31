@@ -630,7 +630,7 @@ __cmd_list () {
         __list_jails ${_switches}
 
         if [ ${_nonioc} -eq 1 ] ; then
-            __show_non_ioc_jails ${_noheader}
+            __list_non_ioc_jails ${_noheader}
         fi
     fi
 }
