@@ -113,6 +113,7 @@ priority=99
 last_started="none"
 type="jail"
 release=$(echo "${supported_releases}" | head -n1)
+arch="$(uname -m)"
 hostid=$(cat /etc/hostid)
 jail_zfs="off"
 jail_zfs_dataset="iocage/jails/${uuid}/root/data"
@@ -243,6 +244,7 @@ CONF_CUSTOM="tag
              jail_zfs_dataset
              jail_zfs_pool
              release
+             arch
              hack88
              iocage_version"
 
