@@ -249,8 +249,8 @@ __destroy_jail () {
         zfs destroy -r ${_origin}
     fi
 
-    if [ "${_jail_type}" == "basejail" ] ; then
-        __info "Destroying base snapshot ${_fulluuid}"
+    if [ "${_jail_type}" = "basejail" ] ; then
+        __info "Destroying base snapshot @${_fulluuid}"
         zfs destroy -fr ${pool}/iocage/base@${_fulluuid}
     fi
 }
@@ -387,7 +387,7 @@ __check_filesystems () {
                 "Please run iocage as root to create missing datasets."
             zfs create -p ${pool}${_fs}
             zfs set mountpoint=${_fs} ${pool}${_fs}
-            if [ ${_fs} == ${iocroot}/.defaults ] ; then
+            if [ ${_fs} = ${iocroot}/.defaults ] ; then
                 __update_defaults_ioc_properties
             fi
         fi
@@ -498,7 +498,7 @@ __update_defaults_ioc_properties () {
 
     for _prop in ${_CONF} ; do
         _value=$(__get_dataset_ioc_prop ${_prop} ${_dataset})
-        if [ "${_value}" == "-" ] ; then
+        if [ "${_value}" = "-" ] ; then
             eval _value=\$${_prop}
             __set_dataset_ioc_prop ${_prop}="${_value}" ${_dataset}
         fi
@@ -529,7 +529,7 @@ __update_dataset_ioc_properties () {
 
     for _prop in ${_CONF} ; do
         _value=$(__get_dataset_ioc_prop ${_prop} ${_dataset})
-        if [ "${_value}" == "-" ] ; then
+        if [ "${_value}" = "-" ] ; then
             _value=$(__get_default_prop ${_prop})
             __set_dataset_ioc_prop ${_prop}="${_value}" ${_dataset}
         fi
