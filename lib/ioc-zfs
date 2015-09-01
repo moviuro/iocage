@@ -465,7 +465,7 @@ __check_filesystems () {
         fi
     done
 
-    if [ ${_missing} -gt 0 ] ; then
+    if [ ${_missing} -ne 0 ] ; then
         zfs mount -a
     fi
 
@@ -484,7 +484,7 @@ __check_filesystems () {
 # Version is stored per-jail so that when jails are transferred between
 # different versions of iocage, we can detect and fix missing properties without
 # requiring manual intervention.
-__check_all_ioc_version () {
+__check_jails_ioc_version () {
     local _mismatches _dataset
 
     # This is only slightly complicated because the version string contains
@@ -505,9 +505,9 @@ __check_all_ioc_version () {
     _mismatches=$(zfs get -Hrd1 -o name,value \
                       org.freebsd.iocage:iocage_version \
                       ${pool}${iocroot}/jails \
-                         | awk -v version="${iocage_version}" \
-                               'BEGIN { gsub(/[()]/, "\\\\&", version) }
-                                FNR > 1 && $0 !~ version { print $1 }')
+                  | awk -v version="${iocage_version}" \
+                        'BEGIN { gsub(/[()]/, "\\\\&", version) }
+                         FNR > 1 && $0 !~ version { print $1 }')
 
     [ $(__wc ${_mismatches}) -eq 0 ] ||
         __require_root \
@@ -520,34 +520,16 @@ __check_all_ioc_version () {
     wait
 }
 
-# Check that our jail is compatible with this version of iocage.
+# Check that our user defaults are compatible with this version of iocage.
 #
-# If the jail isn't compatible, make it compatible.
-#
-# Version is stored per-jail so that when jails are transferred between
-# different versions of iocage, we can detect and fix missing properties without
-# requiring manual intervention.
-__check_dataset_ioc_version () {
-    local _dataset _jail_version
-
-    _dataset=${1}
-
-    _jail_version=$(__get_dataset_ioc_prop iocage_version ${_dataset})
-
-    if [ "${_jail_version}" != "${iocage_version}" ] ; then
-        __update_dataset_ioc_properties ${_dataset}
-    fi
-}
-
-# Same as above but for the .defaults dataset.
+# If the defaults aren't compatible, make them compatible.
 __check_defaults_ioc_version () {
-    local _dataset _jail_version
+    local _dataset _ioc_version
 
     _dataset=${pool}/iocage/.defaults
+    _ioc_version=$(__get_dataset_ioc_prop iocage_version ${_dataset})
 
-    _jail_version=$(__get_dataset_ioc_prop iocage_version ${_dataset})
-
-    if [ "${_jail_version}" != "${iocage_version}" ] ; then
+    if [ "${_ioc_version}" != "${iocage_version}" ] ; then
         __info "Updating default iocage properties."
         __require_root \
             "Please run iocage once as root to update default properties."

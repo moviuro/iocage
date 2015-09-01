@@ -440,7 +440,6 @@ __cmd_exec () {
     shift
 
     if [ ${_name} = "ALL" ]; then
-        __check_all_ioc_version
         __exec_all ${_jexecopts} "${@}"
     else
         _dataset=$(__find_jail ${_name})
@@ -530,7 +529,6 @@ __cmd_get () {
     __check_name_all_default "${_name}"
 
     if [ ${_name} = "ALL" ] ; then
-        __check_all_ioc_version
         __get_all_prop ${_noheader} ${_property}
     else
         _dataset=$(__find_jail ${_name})
@@ -621,8 +619,6 @@ __cmd_list () {
         esac
     done
 
-    __check_all_ioc_version
-
     if [ ${_releases} -eq 1 ] ; then
         __list_releases ${_noheader}
     else
@@ -663,12 +659,10 @@ __cmd_promote () {
 }
 
 __cmd_rcboot () {
-    __check_all_ioc_version
     __rc_jails boot
 }
 
 __cmd_rcshutdown () {
-    __check_all_ioc_version
     __rc_jails shutdown
 }
 
@@ -715,8 +709,6 @@ __cmd_reset () {
                 exit 1
             fi
         fi
-
-        __check_all_ioc_version
 
         echo "  Resetting all jails."
 
@@ -806,8 +798,6 @@ __cmd_show () {
     _property=${1}
     __require_not_empty "${_property}" "Missing property name!"
     __require_single_word "${_property}" "Invalid property name!"
-
-    __check_all_ioc_version
 
     __show ${_property}
 }

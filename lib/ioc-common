@@ -319,10 +319,6 @@ __check_dataset () {
     __require_dataset_not_empty "${_dataset}" "${_name}"
     __require_dataset_not_multiple "${_dataset}" "${_name}"
     __require_dataset_single_word "${_dataset}" "${_name}"
-
-    if [ ${_dataset} != ${pool}/iocage/.defaults ] ; then
-        __check_dataset_ioc_version ${_dataset}
-    fi
 }
 
 # Set properties -------------------------------------------------------
