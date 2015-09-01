@@ -485,7 +485,7 @@ __check_filesystems () {
 # different versions of iocage, we can detect and fix missing properties without
 # requiring manual intervention.
 __check_all_ioc_version () {
-    local _mismatches _jail _uuid
+    local _mismatches _dataset
 
     # This is only slightly complicated because the version string contains
     # parenthesis which must be escaped. Here's the play-by-play:
@@ -513,8 +513,8 @@ __check_all_ioc_version () {
         __require_root \
             "Please run iocage once as root to update jail properties."
 
-    for _jail in ${_mismatches} ; do
-        __update_dataset_ioc_properties ${_jail} &
+    for _dataset in ${_mismatches} ; do
+        __update_dataset_ioc_properties ${_dataset} &
     done
 
     wait
@@ -528,20 +528,20 @@ __check_all_ioc_version () {
 # different versions of iocage, we can detect and fix missing properties without
 # requiring manual intervention.
 __check_dataset_ioc_version () {
-    local _dataset _jail_version _uuid
+    local _dataset _jail_version
 
     _dataset=${1}
 
     _jail_version=$(__get_dataset_ioc_prop iocage_version ${_dataset})
 
     if [ "${_jail_version}" != "${iocage_version}" ] ; then
-        __update_dataset_ioc_properties ${_jail}
+        __update_dataset_ioc_properties ${_dataset}
     fi
 }
 
 # Same as above but for the .defaults dataset.
 __check_defaults_ioc_version () {
-    local _dataset _jail_version _uuid
+    local _dataset _jail_version
 
     _dataset=${pool}/iocage/.defaults
 

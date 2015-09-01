@@ -440,6 +440,7 @@ __cmd_exec () {
     shift
 
     if [ ${_name} = "ALL" ]; then
+        __check_all_ioc_version
         __exec_all ${_jexecopts} "${@}"
     else
         _dataset=$(__find_jail ${_name})
@@ -529,6 +530,7 @@ __cmd_get () {
     __check_name_all_default "${_name}"
 
     if [ ${_name} = "ALL" ] ; then
+        __check_all_ioc_version
         __get_all_prop ${_noheader} ${_property}
     else
         _dataset=$(__find_jail ${_name})
@@ -713,6 +715,8 @@ __cmd_reset () {
                 exit 1
             fi
         fi
+
+        __check_all_ioc_version
 
         echo "  Resetting all jails."
 

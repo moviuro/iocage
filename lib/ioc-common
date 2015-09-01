@@ -320,23 +320,9 @@ __check_dataset () {
     __require_dataset_not_multiple "${_dataset}" "${_name}"
     __require_dataset_single_word "${_dataset}" "${_name}"
 
-    __check_dataset_ioc_version ${_dataset}
-}
-
-# Check the validity of the given dataset name -------------------------
-#
-# Multiple words OK.
-#
-# ${1}: the dataset to check
-# ${2}: (optional) the UUID or tag corresponding to the given dataset
-__check_dataset_all () {
-    local _name _dataset
-
-    _dataset=${1}
-    _name=${2:-"the given UUID or tag"}
-
-    __require_dataset_not_empty "${_dataset}" "${_name}"
-    __require_dataset_not_multiple "${_dataset}" "${_name}"
+    if [ ${_dataset} != ${pool}/iocage/.defaults ] ; then
+        __check_dataset_ioc_version ${_dataset}
+    fi
 }
 
 # Set properties -------------------------------------------------------
