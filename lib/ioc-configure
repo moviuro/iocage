@@ -167,6 +167,21 @@ ipv6_activate_all_interfaces="YES"
 EOT
 }
 
+__jail_fstab () {
+    cat << EOT
+# This is the filesystem table for your jail's additional mounts.
+# The syntax of this file is described in fstab(5) with one exception:
+# You may use %jailroot% in this file and it will be expanded at runtime
+# to the path of the jail's root filesystem.
+#
+# Example:
+# /content/shared       %jailroot%/content/shared       nullfs  ro      0 0
+# /content/www0         %jailroot%/content/www0         nullfs  rw      0 0
+
+# Device                Mountpoint                      FSType  Options D P#
+EOT
+}
+
 # This is mostly for pkg autoinstall.
 __resolv_conf () {
     local _dataset _resolver _resolver_default
@@ -193,15 +208,16 @@ __resolv_conf () {
 }
 
 __pkg_install () {
-    local _chrootdir _pkg
+    local _dataset _mountpoint _pkglist
 
-    _chrootdir=${1}
+    _dataset=${1}
 
     if [ -e "${pkglist}" ] ; then
-        echo "* Installing extra packages.."
-        for _pkg in $(cat "${pkglist}") ; do
-            pkg -c "${_chrootdir}" install -qy "${_pkg}"
-        done
+        _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+        _pkglist=$(grep -v ^# "${pkglist}")
+        __info "Installing extra packages..."
+        pkg -c ${_mountpoint}/root install -qy ${_pkglist} ||
+            __error "Installing packages failed. Continuing."
     fi
 }
 

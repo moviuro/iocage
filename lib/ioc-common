@@ -82,6 +82,19 @@ __require_single_word () {
     [ "${_words}" -eq 1 ] || __fatal_error "${_description}"
 }
 
+# Require that a given release has been fetched ------------------------
+#
+# ${1}: (optional) the name of the release, without the patch level
+#       the default is to use the global value for ${release}
+__require_release_fetched () {
+    local _release
+
+    _release=${1:-${release}}
+
+    zfs list -Hrd1 -o name ${pool}/iocage/releases | grep -q ${_release} ||
+        __fatal_error "Release ${_release} not found locally, run fetch first."
+}
+
 # Require that a given value is not empty ------------------------------
 #
 # If the length of the string value is nonzero, nothing happens.

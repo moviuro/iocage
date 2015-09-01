@@ -56,7 +56,8 @@ __find_jail_all () {
 
     _uuid_regex="[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
 
-    zfs list -Hrd1 -o name ${pool}/iocage/jails | egrep "/${_uuid_regex}$"
+    zfs list -Hrd1 -o name -s org.freebsd.iocage:tag ${pool}/iocage/jails \
+    | egrep "/${_uuid_regex}$"
 }
 
 __find_jail_by_name () {
@@ -67,6 +68,7 @@ __find_jail_by_name () {
     _ioc="org.freebsd.iocage"
     _uuid_regex="[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
     _matched=$(zfs list -Hrd1 -o ${_ioc}:host_hostuuid,${_ioc}:tag \
+                   -s org.freebsd.iocage:tag \
                    ${pool}/iocage/jails \
                | egrep -w "${_uuid_regex}" \
                | awk -v name="^${_name}" '$1 ~ name || $2 ~ name { print $1 }')
