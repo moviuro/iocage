@@ -62,7 +62,7 @@ __reclone_basejail () {
 
 # This creates jails ---------------------------------------------------
 __create_jail () {
-    local _flag _dataset _rc_conf
+    local _flag _dataset _mountpoint
 
     _flag=${1}
 
@@ -82,15 +82,16 @@ __create_jail () {
         *) __create_jail_standard_datasets ${_dataset} ;;
     esac
 
-    __jail_fstab > ${iocroot}/jails/${uuid}/fstab
-
     # Create the default jail_zfs_dataset just in case the user wants it.
     zfs create -p -o compression=lz4 ${pool}/${jail_zfs_dataset}
     zfs set mountpoint=none ${pool}/${jail_zfs_dataset}
     zfs set jailed=on ${pool}/${jail_zfs_dataset}
 
-    # Update the mountpoint for hack88 before installing packages.
+    # Update the mountpoint for hack88.
     __update_mountpoint ${_dataset}
+    _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
+
+    __jail_fstab > ${_mountpoint}/fstab
 
     # Perform additional steps for non-empty jails.
     if [ "${_flag}" != "-e" ] ; then
@@ -99,9 +100,8 @@ __create_jail () {
         __snapremove ${_dataset} ALL
 
         # Write the default rc.conf to the jail.
-        _rc_conf=${iocroot}/jails/${uuid}/root/etc/rc.conf
-        echo "hostname=\"${hostname}\"" > ${_rc_conf}
-        __jail_rc_conf >> ${_rc_conf}
+        echo "hostname=\"${hostname}\"" > ${_mountpoint}/root/etc/rc.conf
+        __jail_rc_conf >> ${_mountpoint}/root/etc/rc.conf
 
         # Give the jail a resolv.conf according to the resolver property.
         __resolv_conf ${_dataset}
@@ -111,12 +111,10 @@ __create_jail () {
             __pkg_install ${_dataset}
         fi
 
-    else
-
-        # Just echo the UUID for empty jails.
-        echo ${uuid}
-
     fi
+
+    # Echo the UUID so the user doesn't have to immediately run `iocage list`.
+    echo ${uuid}
 }
 
 # Create the datasets for a cloned jail.
