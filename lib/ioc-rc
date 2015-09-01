@@ -170,7 +170,7 @@ __vnet_start () {
 
     jail -c vnet \
          name="ioc-${_uuid}" \
-         host.hostname="$(__get_dataset_ioc_prop hostname ${_dataset})" \
+         host.hostname="$(__get_dataset_ioc_prop host_hostname ${_dataset})" \
          path="${_mountpoint}/root" \
          securelevel="$(__get_dataset_ioc_prop securelevel ${_dataset})" \
          host.hostuuid="${_uuid}" \
@@ -271,7 +271,7 @@ __legacy_start () {
          ip4="${_ip4}" \
          ${_ip6_props} \
          name="ioc-${_uuid}" \
-         host.hostname="$(__get_dataset_ioc_prop hostname ${_dataset})" \
+         host.hostname="$(__get_dataset_ioc_prop host_hostname ${_dataset})" \
          path="${_mountpoint}/root" \
          securelevel="$(__get_dataset_ioc_prop securelevel ${_dataset})" \
          host.hostuuid="${_uuid}" \

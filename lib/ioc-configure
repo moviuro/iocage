@@ -29,16 +29,19 @@ __configure_jail () {
     # Configure the iocage properties for the jail.
     for _prop_name in ${_CONF} ; do
 
+        unset _value
+
         # Overrides of .defaults or source jail for certain properties.
         case ${_prop_name} in
 
             # These properties are unique for each jail so the user's .defaults
             # or the source jail's configured value will never be used. Instead
-            # use the global auto-generated values, or the values given on the
+            # use the global values, which will be either the runtime-generated
+            # value from lib/ioc-globals or overridden by the user on the
             # command line.
             "tag");&
             "jail_zfs_dataset");&
-            "hostname"|"host_hostname"|"host_hostuuid")
+            "host_hostname"|"host_hostuuid")
                 eval _value=\$${_prop_name}
                 ;;
 
@@ -66,9 +69,10 @@ __configure_jail () {
                 ;;
 
             # The remaining overrides specified on the command line are caught
-            # here. Using the iocset_* variant ensures we aren't overriding the
-            # user's .defaults or the source jail's settings with the hardcoded
-            # global ones.
+            # here. If the user has not set this property on the command
+            # line, the iocset_* variable will be unset, so _value will remain
+            # empty and therefore inherit the value from the source jail or the
+            # user's default.
             *)
                 eval _value=\$iocset_${_prop_name}
                 ;;
@@ -94,8 +98,6 @@ __configure_jail () {
             echo "** ${_prop_name}=${_value}"
             __set_dataset_ioc_prop ${_prop_name}="${_value}" ${_dataset}
         fi
-
-        unset _value
 
     done
 
