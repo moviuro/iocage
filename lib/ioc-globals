@@ -305,10 +305,13 @@ __term_supports_colors () {
     return ${_result}
 }
 
-if __term_supports_colors ; then
+if [ -t 1 ] && __term_supports_colors ; then
     OK="\e[32mOK\e[0m"
-    FAILED="\e[31mFAILED\e[0m"
 else
     OK="OK"
+fi
+if [ -t 2 ] && __term_supports_colors ; then
+    FAILED="\e[31mFAILED\e[0m"
+else
     FAILED="FAILED"
 fi

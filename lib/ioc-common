@@ -5,11 +5,17 @@ __export_props () {
     local _i
 
     for _i in "${@}" ; do
-        if echo ${_i} | grep -qe ".*=.*" ; then
+        if echo ${_i} | egrep -q "^[[:alnum:]][[:alnum:]_]+=.+" ; then
             export "${_i}"
             export "iocset_${_i}"
         fi
     done
+
+    case "${tag}" in
+        "ALL"|"default")
+            __fatal_error "Invalid tag: ${tag} is a reserved keyword"
+            ;;
+    esac
 }
 
 # Echo to stderr -------------------------------------------------------
@@ -341,6 +347,11 @@ __set_jail_prop () {
                 __fatal_error "Failed to set automatic IPv4 address."
             ;;
         "tag")
+            case "${_pval}" in
+                "ALL"|"default")
+                    __fatal_error "Invalid tag: ${tag} is a reserved keyword"
+                    ;;
+            esac
             __set_dataset_ioc_prop tag="${_pval}" ${_dataset}
             __replace_tag_symlink ${_dataset}
             return
@@ -352,8 +363,6 @@ __set_jail_prop () {
             __set_dataset_ioc_prop hack88="${_pval}" ${_dataset}
             __update_mountpoint ${_dataset}
             return
-            ;;
-        *)
             ;;
     esac
 

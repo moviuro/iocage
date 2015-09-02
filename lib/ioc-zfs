@@ -34,20 +34,18 @@ __create_basejail () {
 }
 
 __reclone_basejail () {
-    local _dataset _fulluuid _jail_release _fs
+    local _dataset _fulluuid _id _jail_release _fs
 
     _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _id="[${_fulluuid}]"
     _jail_release=$(__get_dataset_ioc_prop release ${_dataset})
-
-    __stderr "[${_fulluuid}] Re-creating base snapshot"
 
     zfs destroy -rRf ${pool}/iocage/base@${_fulluuid} 2>/dev/null
     zfs snapshot -r  ${pool}/iocage/base@${_fulluuid} 2>/dev/null
 
-    __stderr -e "[${_fulluuid}] Re-creating base snapshot ${OK}"
-    __stderr "[${_fulluuid}] Re-cloning base filesystems"
+    echo -e "${_id} Re-creating base snapshot ${OK}"
 
     # Re-clone required filesystems
     for _fs in ${bfs_list} ; do
@@ -57,7 +55,7 @@ __reclone_basejail () {
             ${_dataset}/root/${_fs}
     done
 
-    __stderr -e "[${_fulluuid}] Re-cloning base filesystems ${OK}"
+    echo -e "${_id} Re-cloning base filesystems ${OK}"
 }
 
 # This creates jails ---------------------------------------------------

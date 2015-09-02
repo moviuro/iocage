@@ -1,16 +1,19 @@
 #!/bin/sh
 
 __start_jail () {
-    local _dataset _fulluuid _template _nics _i _nic _bridge _jail_hostid \
-          _tag _jail_type _mountpoint _procfs _jzfs _jzfs_pool _jzfs_dataset \
-          _vnet _cpuset
+    local _dataset _fulluuid _id _status _template _nics _i _nic _bridge \
+          _jail_hostid _tag _jail_type _mountpoint _procfs _jzfs _jzfs_pool \
+          _jzfs_dataset _vnet _cpuset
 
     _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _id="[${_fulluuid}]"
+    _status=0
+
     if __is_running ${_fulluuid} ; then
-        echo "[${_fulluuid}] Jail is already up"
-        exit 1
+        echo "${_id} Jail is already up"
+        return 0
     fi
 
     _template=$(__get_dataset_ioc_prop template ${_dataset})
@@ -24,25 +27,14 @@ __start_jail () {
         _bridge=${_i#*:}
 
         if [ -z "${_nic}" ] || [ -z "${_bridge}" ] ; then
-            echo "  ERROR  : incorrect interfaces property format"
-            echo "  HINT   : check with \"iocage get interfaces ${_fulluuid}\""
-            echo "  Example: vnet0:bridge0"
-            exit 1
+            __stderr "${_id} Incorrect interfaces property format"
+            return 1
         fi
     done
 
-    _jail_hostid=$(__get_dataset_ioc_prop hostid ${_dataset})
-    if [ "${_jail_hostid}" != "${hostid}" ] ; then
-        echo "ERROR: hostid mismatch, start failed!"
-        echo "    jail hostid: ${_jail_hostid}"
-        echo "  host's hostid: ${hostid}"
-        exit 1
-    fi
-
     _tag=$(__get_dataset_ioc_prop tag ${_dataset})
-    echo "[${_fulluuid}] Starting (tag: \"${_tag}\")"
 
-    echo "[${_fulluuid}] Preparing filesystems"
+    echo "${_id} Starting (tag: \"${_tag}\")"
 
     _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
     if [ "${_jail_type}" = "basejail" ] ; then
@@ -67,8 +59,10 @@ __start_jail () {
     if [ "${_jzfs}" = "on" ] ; then
         _jzfs_dataset=$(__get_dataset_ioc_prop jail_zfs_dataset ${_dataset})
         _jzfs_pool=$(__get_dataset_ioc_prop jail_zfs_pool ${_dataset})
-        __require_single_word "${_jzfs_pool}" \
-                              "Invalid jail_zfs_pool: ${_jzfs_pool}"
+        if [ $(__wc ${_jzfs_pool}) -ne 1 ] ; then
+            __stderr "${_id} Invalid jail_zfs_pool: ${_jzfs_pool}"
+            return 1
+        fi
         if [ "${_jzfs_pool}" = "DEFAULT" ] ; then
             _jzfs_pool=${pool}
         fi
@@ -78,40 +72,40 @@ __start_jail () {
         __set_dataset_zfs_prop jailed=on ${_jzfs_pool}/${_jzfs_dataset}
     fi
 
-    echo -e "[${_fulluuid}] Preparing filesystems ${OK}"
+    echo -e "${_id} Filesystems preparation ${OK}"
 
     _vnet=$(__get_dataset_ioc_prop vnet ${_dataset})
     if [ "${_vnet}" = "on" -o "${_vnet}" = "-" ] ; then
         if [ -n $(sysctl -qn kern.features.vimage) ] ; then
-            echo "[${_fulluuid}] Starting jail (VNET mode)"
             __vnet_start ${_dataset}
             if [ ${?} -eq 0 ] ; then
-                echo -e "[${_fulluuid}] Starting jail (VNET mode) ${OK}"
+                echo -e "${_id} Starting jail (VNET mode) ${OK}"
             else
-                echo -e "[${_fulluuid}] Starting jail (VNET mode) ${FAILED}"
-                exit 1
+                __stderr -e "${_id} Starting jail (VNET mode) ${FAILED}"
+                return 1
             fi
 
-            echo "[${_fulluuid}] Configuring VNET"
             __networking start ${_dataset}
             if [ ${?} -eq 0 ] ; then
-                echo -e "[${_fulluuid}] Configuring VNET ${OK}"
+                echo -e "${_id} VNET configuration ${OK}"
             else
-                echo -e "[${_fulluuid}] Configuring VNET ${FAILED}"
+                __stderr -e "${_id} VNET configuration ${FAILED}"
+                _status=1
             fi
         else
-            echo "  ERROR: start failed for ${_fulluuid} (${_tag})"
-            echo "  vnet=on but kernel is not VNET capable!"
-            echo "  Turn vnet off for this jail or recompile kernel with VNET."
-            exit 1
+            __stderr "${_id} Start failed:"
+            __stderr "${_id}   vnet=on but kernel is not VNET capable!"
+            __stderr "${_id}   Turn vnet off for this jail or recompile"
+            __stderr "${_id}   kernel with VNET."
+            return 1
         fi
     else
-        echo "[${_fulluuid}] Starting jail (shared IP mode)"
         __legacy_start ${_dataset}
         if [ ${?} -eq 0 ] ; then
-            echo -e "[${_fulluuid}] Starting jail (shared IP mode) ${OK}"
+            echo -e "${_id} Starting jail (shared IP mode) ${OK}"
         else
-            echo -e "[${_fulluuid}] Starting jail (shared IP mode) ${FAILED}"
+            __stderr -e "${_id} Starting jail (shared IP mode) ${FAILED}"
+            return 1
         fi
     fi
 
@@ -121,13 +115,13 @@ __start_jail () {
 
     _cpuset=$(__get_dataset_ioc_prop cpuset ${_dataset})
     if [ "${_cpuset}" != "off" ] ; then
-        echo "[${_fulluuid}] Setting CPU affinity"
         _jid=$(jls -j ioc-${_fulluuid} jid)
         cpuset -l ${_cpuset} -j ${_jid}
         if [ ${?} -eq 0 ] ; then
-            echo -e "[${_fulluuid}] Setting CPU affinity ${OK}"
+            echo -e "${_id} Setting CPU affinity ${OK}"
         else
-            echo -e "[${_fulluuid}] Setting CPU affinity ${FAILED}"
+            __stderr -e "${_id} Setting CPU affinity ${FAILED}"
+            _status=1
         fi
     fi
 
@@ -137,16 +131,18 @@ __start_jail () {
 
     __resolv_conf ${_dataset}
 
-    echo "[${_fulluuid}] Starting services"
     jexec ioc-${_fulluuid} $(__get_dataset_ioc_prop exec_start ${_dataset}) \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     if [ ${?} -eq 0 ] ; then
-        echo -e "[${_fulluuid}] Starting services ${OK}"
+        echo -e "${_id} Starting services ${OK}"
     else
-        echo -e "[${_fulluuid}] Starting services ${FAILED}"
+        __stderr -e "${_id} Starting services ${FAILED}"
+        _status=1
     fi
 
     __set_dataset_ioc_prop last_started=$(date "+%F_%T") ${_dataset}
+
+    return ${_status}
 }
 
 # Start a VNET jail
@@ -313,87 +309,86 @@ __legacy_start () {
 }
 
 __stop_jail () {
-    local _dataset _fulluuid _tag _exec_prestop _exec_stop _vnet _ip4 \
-          _exec_poststop _mountpoint _rlimits
+    local _dataset _fulluuid _id _status _tag _exec_prestop _exec_stop _vnet \
+          _ip4 _exec_poststop _mountpoint _rlimits
 
     _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _id="[${_fulluuid}]"
+    _status=0
 
     if ! __is_running ${_fulluuid} ; then
-        echo "[${_fulluuid}] Jail is already down"
-        exit 1
+        echo "${_id} Jail is already down"
+        return 0
     fi
 
     _tag=$(__get_dataset_ioc_prop tag ${_dataset})
     _exec_prestop=$(__findscript ${_dataset} prestop)
 
-    echo "[${_fulluuid}] Stopping (tag: \"${_tag}\")"
+    echo "${_id} Stopping (tag: \"${_tag}\")"
 
-    echo "[${_fulluuid}] Running pre-stop"
     eval "${_exec_prestop}"
     if [ ${?} -eq 0 ] ; then
-        echo -e "[${_fulluuid}] Running pre-stop ${OK}"
+        echo -e "${_id} Running pre-stop ${OK}"
     else
-        echo -e "[${_fulluuid}] Running pre-stop ${FAILED}"
+        __stderr -e "${_id} Running pre-stop ${FAILED}"
+        _status=1
     fi
 
     _exec_stop=$(__get_dataset_ioc_prop exec_stop ${_dataset})
 
-    echo "[${_fulluuid}] Stopping services"
     jexec ioc-${_fulluuid} ${_exec_stop} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     if [ ${?} -eq 0 ] ; then
-        echo -e "[${_fulluuid}] Stopping services ${OK}"
+        echo -e "${_id} Stopping services ${OK}"
     else
-        echo -e "[${_fulluuid}] Stopping services ${FAILED}"
+        __stderr -e "${_id} Stopping services ${FAILED}"
+        _status=1
     fi
 
     _vnet=$(__get_dataset_ioc_prop vnet ${_dataset})
 
     if [ "${_vnet}" = "on" ] ; then
-        echo "[${_fulluuid}] Tearing down VNET"
         __networking stop ${_dataset}
         if [ ${?} -eq 0 ] ; then
-            echo -e "[${_fulluuid}] Tearing down VNET ${OK}"
+            echo -e "${_id} Tearing down VNET ${OK}"
         else
-            echo -e "[${_fulluuid}] Tearing down VNET ${FAILED}"
+            __stderr -e "${_id} Tearing down VNET ${FAILED}"
+            _status=1
         fi
     else
         _ip4=$(__get_dataset_ioc_prop ip4 ${_dataset})
 
         # don't try to tear down networking if we have "inherit" set
         if [ "${_ip4}" != "inherit" ] ; then
-            echo "[${_fulluuid}] Stopping legacy networking"
             __stop_legacy_networking ${_dataset}
             if [ ${?} -eq 0 ] ; then
-                echo -e "[${_fulluuid}] Stopping legacy networking ${OK}"
+                echo -e "${_id} Stopping legacy networking ${OK}"
             else
-                echo -e "[${_fulluuid}] Stopping legacy networking ${FAILED}"
+                __stderr -e "${_id} Stopping legacy networking ${FAILED}"
+                _status=1
             fi
         fi
     fi
 
-    echo "[${_fulluuid}] Removing jail processes"
     jail -r ioc-${_fulluuid}
-
     if [ ${?} -eq 0 ] ; then
-        echo -e "[${_fulluuid}] Removing jail processes ${OK}"
+        echo -e "${_id} Removing jail processes ${OK}"
     else
-        echo -e "[${_fulluuid}] Removing jail processes ${FAILED}"
+        __stderr -e "${_id} Removing jail processes ${FAILED}"
+        _status=1
     fi
 
     _exec_poststop=$(__findscript ${_dataset} poststop)
 
-    echo "[${_fulluuid}] Running post-stop"
     eval "${_exec_poststop}"
     if [ ${?} -eq 0 ] ; then
-        echo -e "[${_fulluuid}] Running post-stop ${OK}"
+        echo -e "${_id} Running post-stop ${OK}"
     else
-        echo -e "[${_fulluuid}] Running post-stop ${FAILED}"
+        __stderr -e "${_id} Running post-stop ${FAILED}"
+        _status=1
     fi
-
-    echo "[${_fulluuid}] Unmounting filesystems"
 
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
@@ -406,7 +401,7 @@ __stop_jail () {
         umount -ft unionfs ${iocroot}/jails/${_fulluuid}/root > /dev/null 2>&1
     fi
 
-    echo -e "[${_fulluuid}] Unmounting filesystems ${OK}"
+    echo -e "${_id} Unmounting filesystems ${OK}"
 
     if [ -n $(sysctl -qn kern.features.rctl) ] ; then
         _rlimits=$(rctl | grep -c ${_fulluuid})
@@ -414,19 +409,22 @@ __stop_jail () {
             rctl -r jail:ioc-${_fulluuid}
         fi
     fi
+
+    return ${_status}
 }
 
 # Soft restart
 __soft_restart_jail () {
-    local _dataset _fulluuid _exec_stop _exec_start _jid _tag _date
+    local _dataset _fulluuid _id _exec_stop _exec_start _jid _tag _date
 
     _dataset=${1}
 
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+    _id="[${_fulluuid}]"
     _exec_stop=$(__get_dataset_ioc_prop exec_stop ${_dataset})
     _tag=$(__get_dataset_ioc_prop tag ${_dataset})
 
-    echo "[${_fulluuid}] Soft restarting (tag: \"${_tag}\")"
+    echo "${_id} Soft restarting (tag: \"${_tag}\")"
 
     jexec ioc-${_fulluuid} ${_exec_stop} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
