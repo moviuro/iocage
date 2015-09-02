@@ -818,15 +818,19 @@ __cmd_snapremove () {
     local _name _snapshot _dataset
 
     _name=${1%%@*}
-    __check_name "${_name}"
+    __check_name_all "${_name}"
 
     _snapshot=${1#${_name}}
     _snapshot=${_snapshot#@} # Remove leading @ (separate step in case no @)
     __require_not_empty "${_snapshot}" "Missing snapshot name!"
     __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot}"
 
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    if [ ${_name} = "ALL" ] ; then
+        _dataset=${pool}/iocage/jails
+    else
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
+    fi
 
     __snapremove ${_dataset} ${_snapshot}
 }
