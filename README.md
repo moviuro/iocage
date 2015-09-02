@@ -24,7 +24,8 @@ the command line interfaces are diverging. The goals of enhancing our jail
 format and command line interface mean that upstream compatibility takes a lower
 priority.
 
-- **IRC**: For general iocage discussion, [Freenode #iocage](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23iocage)
+- **IRC**: For general iocage discussion and brainstorming on experimental
+           feature ideas for iocage, feel free to join [Freenode #freqlabs](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23freqlabs).
 
 **CURRENT GOALS**
 - Enhance iocage with more zfs-like functionality, syntax
@@ -72,6 +73,7 @@ priority.
   property
 - The fstab for jails offers `%jailroot%` as a placeholder for the root path of
   a jail
+- Option to not replace rc.conf every start (resolver=none, resolver=copy)
 - Helpful comments in the code
 - Various bug fixes
 - And more! :)
