@@ -509,13 +509,15 @@ __cmd_fetch () {
 }
 
 __cmd_get () {
-    local _noheader _opt _property _name _dataset
+    local _noheader _valueonly _opt _property _name _dataset _value
 
     _noheader=0
+    _valueonly=0
 
-    while getopts ":H" _opt ; do
+    while getopts ":Ho:" _opt ; do
         case ${_opt} in
             "H") _noheader=1 ;;
+            "o") [ "${OPTARG}" == "value" ] && _valueonly=1 ;;
             "?") __fatal_error "Invalid get option: -${OPTARG}" ;;
         esac
     done
@@ -533,10 +535,15 @@ __cmd_get () {
     else
         _dataset=$(__find_jail ${_name})
         __check_dataset "${_dataset}" ${_name}
-
+        _value="$(__get_jail_prop ${_property} ${_dataset})"
         {
-            [ ${_noheader} -eq 1 ] || printf "%s^%s^%s\n" "UUID" "PROP" "VALUE"
-            printf "%s^%s^%s\n" "${_dataset}" "${_property}"  "$(__get_jail_prop ${_property} ${_dataset})"
+            [ ${_noheader} -eq 1 -o ${_valueonly} -eq 1 ] \
+              || printf "%s^%s^%s\n" "UUID" "PROP" "VALUE"
+            case ${_valueonly} in
+                0) printf "%s^%s^%s\n" "${_dataset}" "${_property}" "${_value}"\
+                  ;;
+                1) printf "%s^\n" "${_value}" ;;
+            esac
         } | column -ts^
     fi
 }
