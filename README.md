@@ -8,14 +8,21 @@ of the best features and technologies the FreeBSD operating system has to offer.
 It is geared for ease of use with a simple and easy to understand command
 syntax.
 
-This fork is focused on code quality and correctness. A major cleanup of the
+This is an experimental fork of iocage, for the purpose of rapidly exploring new
+features and ideas. It is a sandbox for coming up with creative solutions to
+problems and for testing changes. This is not a drop in replacement for upstream
+iocage, it is not intended to be used in any production environment, there is no
+goal of overtaking the upstream project. The objective is to write clean code
+and innovate on features.
+
+This fork focuses on code quality and correctness. A major cleanup of the
 upstream code base was performed to make iocage more pleasant to work on. By
 enforcing more consistent style and naming conventions, making functions more
 concise and easier to reason about, and introducing a separation between user
 interfaces and the implementation of functionality, this fork makes new features
 easier to introduce.
 
-Users should be aware that this repository is at times experimental. Testing and
+Users should be aware that this repository may at times be broken. Testing and
 bug reports are very welcome. The documentation is unfortunately difficult to
 maintain. Currently the `iocage help` documentation is the most accurate.
 
