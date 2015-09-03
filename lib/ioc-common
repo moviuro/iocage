@@ -327,6 +327,44 @@ __check_dataset () {
     __require_dataset_single_word "${_dataset}" "${_name}"
 }
 
+# Check the validity of the given property -----------------------------
+#
+# ${1}: property to check
+# Echoes the corresponding ZFS property
+# Returns 0 upon successful finding, 1 otherwise
+__check_prop_name () {
+    local _found _property _CONF _prop
+
+    _found=0
+    _property=${1}
+    _CONF="${CONF_NET}
+           ${CONF_JAIL}
+           ${CONF_RcTL}
+           ${CONF_CUSTOM}
+           ${CONF_SYNC}
+           ${CONF_FTP}"
+
+    for _prop in ${_CONF} ; do
+        if [ ${_prop} == ${_property} ] ; then
+            _found=1
+            echo ${module}:${_property}
+            return
+        fi
+    done
+
+    if [ ${_found} -eq 0 ] ; then
+        for _prop in ${CONF_ZFS} ; do
+            if [ ${_prop} == ${_property} ] ; then
+                _found=1
+                echo ${_property}
+                return
+            fi
+        done
+    fi
+
+    [ ${_found} -eq 1 ] || __fatal_error "Unsupported property: ${_property}"
+}
+
 # Set properties -------------------------------------------------------
 __set_jail_prop () {
     local _property _dataset _pname _pval _CONF _prop _default
