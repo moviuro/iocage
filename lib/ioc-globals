@@ -4,7 +4,7 @@
 uuid=$(uuidgen)
 
 # define the prefix
-ioc_prefix="org.freebsd.iocage"
+module="org.freebsd.iocage"
 
 # pkg list, only used with the create subcommand
 pkglist="none"

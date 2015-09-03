@@ -501,7 +501,7 @@ __check_jails_ioc_version () {
     # If the line doesn't contain our version string, print the first field,
     # which gives us the dataset with a mismatched version.
     _mismatches=$(zfs get -Hrd1 -o name,value \
-                      "${ioc_prefix}":iocage_version \
+                      ${module}:iocage_version \
                       ${pool}${iocroot}/jails \
                   | awk -v version="${iocage_version}" \
                         'BEGIN { gsub(/[()]/, "\\\\&", version) }
@@ -610,5 +610,5 @@ __unset_dataset_ioc_prop () {
     _property=${1}
     _dataset=${2}
 
-    zfs inherit "${ioc_prefix}":${_property} ${_dataset}
+    zfs inherit ${module}:${_property} ${_dataset}
 }

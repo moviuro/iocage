@@ -56,7 +56,7 @@ __find_jail_all () {
 
     _uuid_regex="[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
 
-    zfs list -Hrd1 -o name -s "${ioc_prefix}:tag" ${pool}/iocage/jails \
+    zfs list -Hrd1 -o name -s ${module}:tag ${pool}/iocage/jails \
     | egrep "/${_uuid_regex}$"
 }
 
@@ -66,8 +66,8 @@ __find_jail_by_name () {
     _name=${1}
 
     _uuid_regex="[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
-    _matched=$(zfs list -Hrd1 -o ${ioc_prefix}:host_hostuuid,${ioc_prefix}:tag \
-                   -s "${ioc_prefix}:tag" \
+    _matched=$(zfs list -Hrd1 -o ${module}:host_hostuuid,${module}:tag \
+                   -s ${module}:tag \
                    ${pool}/iocage/jails \
                | egrep -w "${_uuid_regex}" \
                | awk -v name="^${_name}" '$1 ~ name || $2 ~ name { print $1 }')
@@ -282,7 +282,7 @@ __print_disk_parsable () {
     fi
 
     zfs get -Hpo value -rd1 \
-        ${ioc_prefix}:host_hostuuid,compressratio,reservation,quota,used,available \
+        ${module}:host_hostuuid,compressratio,reservation,quota,used,available \
         ${pool}/iocage/jails \
     | awk 'NR > 6 { printf "%s%s", $0, (NR % 6 ? " " : "\n") }'
 }
@@ -417,7 +417,7 @@ __get_dataset_ioc_prop () {
     _prop=${1}
     _dataset=${2}
 
-    zfs get -Ho value "${ioc_prefix}:${_prop}" ${_dataset}
+    zfs get -Ho value ${module}:${_prop} ${_dataset}
 }
 
 __show () {
