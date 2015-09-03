@@ -415,21 +415,13 @@ __set_dataset_ioc_prop () {
 }
 
 __console () {
-    local _dataset _fulluuid _login_flags _jexec _exec_fib
+    local _dataset _login_flags
 
     _dataset=${1}
 
-    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _login_flags=$(__get_dataset_ioc_prop login_flags ${_dataset})
-    _exec_fib=$(__get_dataset_ioc_prop exec_fib ${_dataset})
 
-    if [ ${_exec_fib} -ne 0 ] ; then
-        _jexec="setfib ${_exec_fib} jexec"
-    else
-        _jexec="jexec"
-    fi
-
-    ${_jexec} ioc-${_fulluuid} login ${_login_flags}
+    __exec ${_dataset} login ${_login_flags}
 }
 
 __exec () {

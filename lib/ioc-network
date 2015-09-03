@@ -133,11 +133,11 @@ __start_networking () {
     fi
 
     if [ "${_defaultgw}" != "none" ] ; then
-        jexec ioc-${_uuid} route add default ${_defaultgw} > /dev/null
+        __exec ${_dataset} route add default ${_defaultgw} > /dev/null
     fi
 
     if [ "${_defaultgw6}" != "none" ] ; then
-        jexec ioc-${_uuid} route add -6 default ${_defaultgw6} >/dev/null
+        __exec ${_dataset} route add -6 default ${_defaultgw6} >/dev/null
     fi
 }
 

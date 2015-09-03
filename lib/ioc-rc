@@ -3,7 +3,7 @@
 __start_jail () {
     local _dataset _fulluuid _id _status _template _nics _i _nic _bridge \
           _jail_hostid _tag _jail_type _mountpoint _procfs _jzfs _jzfs_pool \
-          _jzfs_dataset _vnet _cpuset
+          _jzfs_dataset _vnet _cpuset _exec_start
 
     _dataset=${1}
 
@@ -131,7 +131,8 @@ __start_jail () {
 
     __resolv_conf ${_dataset}
 
-    jexec ioc-${_fulluuid} $(__get_dataset_ioc_prop exec_start ${_dataset}) \
+    _exec_start=$(__get_dataset_ioc_prop exec_start ${_dataset})
+    __exec ${_dataset} ${_exec_start} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     if [ ${?} -eq 0 ] ; then
         echo -e "${_id} Starting services ${OK}"
@@ -193,6 +194,7 @@ __vnet_start () {
          allow.quotas="$(__get_dataset_ioc_prop allow_quotas ${_dataset})" \
          allow.socket_af="$(__get_dataset_ioc_prop allow_socket_af \
                                                    ${_dataset})" \
+         exec.fib="$(__get_dataset_ioc_prop exec_fib ${_dataset})" \
          exec.prestart="$(__findscript ${_dataset} prestart)" \
          exec.poststart="$(__findscript ${_dataset} poststart)" \
          exec.prestop="$(__findscript ${_dataset} prestop)" \
@@ -293,6 +295,7 @@ __legacy_start () {
          allow.quotas="$(__get_dataset_ioc_prop allow_quotas ${_dataset})" \
          allow.socket_af="$(__get_dataset_ioc_prop allow_socket_af \
                                                    ${_dataset})" \
+         exec.fib="$(__get_dataset_ioc_prop exec_fib ${_dataset})" \
          exec.prestart="$(__findscript ${_dataset} prestart)" \
          exec.poststart="$(__findscript ${_dataset} poststart)" \
          exec.prestop="$(__findscript ${_dataset} prestop)" \
@@ -337,8 +340,7 @@ __stop_jail () {
     fi
 
     _exec_stop=$(__get_dataset_ioc_prop exec_stop ${_dataset})
-
-    jexec ioc-${_fulluuid} ${_exec_stop} \
+    __exec ${_dataset} ${_exec_stop} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     if [ ${?} -eq 0 ] ; then
         echo -e "${_id} Stopping services ${OK}"
@@ -426,7 +428,7 @@ __soft_restart_jail () {
 
     echo "${_id} Soft restarting (tag: \"${_tag}\")"
 
-    jexec ioc-${_fulluuid} ${_exec_stop} \
+    __exec ${_dataset} ${_exec_stop} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     [ ${?} -eq 0 ] ||
         __fatal_error "Soft restart failed."
@@ -436,7 +438,7 @@ __soft_restart_jail () {
     _date=$(date "+%F_%T")
 
     pkill -j ${_jid}
-    jexec ioc-${_fulluuid} ${_exec_start} \
+    __exec ${_dataset} ${_exec_start} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     __set_dataset_ioc_prop last_started=${_date} ${_dataset}
 }
