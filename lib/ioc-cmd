@@ -534,7 +534,10 @@ __cmd_get () {
         _dataset=$(__find_jail ${_name})
         __check_dataset "${_dataset}" ${_name}
 
-        __get_jail_prop ${_property} ${_dataset}
+        {
+            [ ${_noheader} -eq 1 ] || printf "%s^%s^%s\n" "UUID" "PROP" "VALUE"
+            printf "%s^%s^%s\n" "${_dataset}" "${_property}"  "$(__get_jail_prop ${_property} ${_dataset})"
+        } | column -ts^
     fi
 }
 
