@@ -93,7 +93,7 @@ __configure_jail () {
 
         # Do something with the value.
         if [ ${_generate} -eq 1 ] ; then
-            echo -n "-o org.freebsd.iocage:${_prop_name}=\"${_value}\" "
+            echo -n "-o ${ioc_prefix}:${_prop_name}=\"${_value}\" "
         else
             echo "** ${_prop_name}=${_value}"
             __set_dataset_ioc_prop ${_prop_name}="${_value}" ${_dataset}

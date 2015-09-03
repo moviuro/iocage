@@ -5,7 +5,7 @@
 # will set up the host for iocage
 
 __init_host () {
-    local _host _pool _ioc _fs_list _remote_pool _fs
+    local _host _pool _fs_list _remote_pool _fs
 
     _host=${1}
     __require_not_empty "${_host}" "Missing host name"
@@ -13,8 +13,6 @@ __init_host () {
     _pool=${2}
     __require_not_empty "${_pool}" "Missing pool name"
 
-    _ioc="org.freebsd.iocage"
-    
     _fs_list="${iocroot}/base
               ${iocroot}/download
               ${iocroot}/releases
@@ -23,8 +21,8 @@ __init_host () {
     _remote_pool=$(ssh ${_host} zpool get -Ho value name ${_pool})
     __require_not_empty "${_remote_pool}" "No remote pool ${_pool} found"
 
-    ssh ${_host} "zfs set ${_ioc}:active=yes ${_remote_pool}
-               && zfs set ${_ioc}:version='${iocage_version}' ${_remote_pool}
+    ssh ${_host} "zfs set ${ioc_prefix}:active=yes ${_remote_pool}
+               && zfs set ${ioc_prefix}:version='${iocage_version}' ${_remote_pool}
                && zfs create ${_remote_pool}${iocroot}
                && zfs set mountpoint=${iocroot} ${_remote_pool}${iocroot}
                && mkdir ${iocroot}/log"
