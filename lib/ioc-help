@@ -15,6 +15,7 @@ SYNOPSIS
      iocage destroy [-f] uuid|tag|ALL
      iocage reset uuid|tag|ALL
      iocage list [-H] -r|[-btnl]
+     iocage status [-H] [uuid|tag]
      iocage start uuid|tag
      iocage stop uuid|tag
      iocage restart [-H] uuid|tag
@@ -25,7 +26,7 @@ SYNOPSIS
      iocage chroot uuid|tag [command [arg]...]
      iocage df [-p]
      iocage show property
-     iocage get property|all uuid|tag
+     iocage get property|all [uuid|tag]
      iocage set property=value uuid|tag
      iocage cap uuid|tag
      iocage limits [uuid|tag]
@@ -241,6 +242,15 @@ DESCRIPTION
 
          Combining the -t and -b flags shows only templates that are basejails.
 
+     status [-H] [uuid|tag]
+
+         Show the whether a jail is "up" or "down".  If no jail is specified,
+         the status of all jails is output.
+
+         -H      Suppress header.  When no jail is specified, a header is
+                 normally show unless this option is used.  No-op when a jail is
+                 specified.
+
      df [-p]
 
          List disk space related information.  If -p is specified, the output
@@ -315,10 +325,11 @@ DESCRIPTION
 
            # iocage show last_started
 
-     get property|all uuid|tag
+     get property|all [uuid|tag|ALL]
 
          Get the named property or if "all" keyword is specified dump all
-         properties known to iocage.
+         properties known to iocage.  If no jail is specified or the keyword
+         "ALL" is given as the jail, the property is listed for all jails.
 
          Example:
 

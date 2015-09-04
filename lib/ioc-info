@@ -474,10 +474,49 @@ __findscript () {
     fi
 }
 
+# Test if a jail is running.
+#
+# Returns 0 if the jail is up, 1 if otherwise.
+#
+# ${1}: UUID of the jail in question
 __is_running () {
-    local _fulluuid
+    local _uuid
 
-    _fulluuid=${1}
+    _uuid=${1}
 
-    jls name | grep -q ioc-${_fulluuid}
+    jls name | grep -q ioc-${_uuid}
+}
+
+__status () {
+    local _dataset _uuid
+
+    _dataset=${1}
+
+    _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+
+    if __is_running ${_uuid} ; then
+        echo "up"
+    else
+        echo "down"
+    fi
+}
+
+# Show the status of all jails known to iocage.
+#
+# ${1}: suppress the header line?
+__status_all () {
+    local _noheader _uuids _uuid
+
+    _noheader=${1}
+
+    _uuids=$(zfs list -Hrd1 -o ${module}:host_hostuuid ${pool}/iocage/jails \
+             | awk 'NR > 1') # Awk for trimming the ${pool}/iocage/jails line
+
+    {
+        [ ${_noheader} -eq 0 ] && printf "%s^%s\n" "UUID" "STATUS"
+        for _uuid in ${_uuids} ; do
+            echo -n "${_uuid}^"
+            __status ${pool}/iocage/jails/${_uuid}
+        done
+    } | column -ts^
 }

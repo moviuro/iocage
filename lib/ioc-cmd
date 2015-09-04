@@ -181,6 +181,10 @@ __parse_cmd () {
                 __cmd_start "${@}"
                 exit
                 ;;
+            status)
+                __cmd_status "${@}"
+                exit
+                ;;
             stop)
                 __require_root
                 __cmd_stop "${@}"
@@ -861,6 +865,33 @@ __cmd_start () {
     __check_dataset "${_dataset}" ${_name}
 
     __start_jail ${_dataset}
+}
+
+__cmd_status () {
+    local _noheader OPTIND _opt _name _dataset
+
+    _noheader=0
+
+    OPTIND=1
+    while getopts ":H" _opt ; do
+        case ${_opt} in
+            "H") _noheader=1 ;;
+            "?") __fatal_error "Unsupported option: -${OPTARG}" ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    _name=${1:-"ALL"}
+    __check_name_all "${_name}"
+
+    if [ ${_name} = "ALL" ] ; then
+        __status_all ${_noheader}
+    else
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
+
+        __status ${_dataset}
+    fi
 }
 
 __cmd_stop () {
