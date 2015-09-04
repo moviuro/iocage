@@ -219,12 +219,12 @@ __create_jail_standard_datasets () {
 
 # Cloning jails ----------------------------------------------------------
 __clone_jail () {
-    local _switches _dataset _snapshot _zfsconfig _fs_list _fs _cfs \
-          _clone_dataset _mountpoint
+    local _switches _dataset _snapshot _zfsconfig _clone_dataset _fs_list _fs \
+          _cfs _mountpoint
 
     _switches=${1} # {keep props}{keep fstab}
     _dataset=${2}
-    _snapshot=${3:-@${uuid}}
+    _snapshot=${3:-${uuid}}
 
     # Get the configuration for this jail, either from defaults or the source.
     # _switches: {keep props?}{don't care}
@@ -235,22 +235,22 @@ __clone_jail () {
     esac ||
         __fatal_error "A problem occurred while configuring the jail."
 
-    _fs_list=$(zfs list -rHo name ${_dataset})
-
-    if ! zfs list ${_dataset}${_snapshot} >&- 2>&- ; then
-        zfs snapshot -r ${_dataset}${_snapshot}
+    if ! zfs list ${_dataset}@${_snapshot} >&- 2>&- ; then
+        zfs snapshot -r ${_dataset}@${_snapshot}
     fi
 
+    _clone_dataset=${pool}/iocage/jails/${uuid}
+
+    _fs_list=$(zfs list -Hro name ${_dataset})
     for _fs in ${_fs_list} ; do
-        _cfs=$(echo ${_fs} | sed s#${_dataset}#${pool}/iocage/jails/${uuid}#g)
-        if echo ${_cfs} | grep -q data$ ; then
-            zfs clone -o mountpoint=none -o jailed=on ${_fs}${_snapshot} ${_cfs}
+        _cfs=$(echo ${_fs} | sed s#${_dataset}#${_clone_dataset}#g)
+        if [ ${_cfs} = ${_clone_dataset}/data ] ; then
+            zfs clone -o mountpoint=none -o jailed=on \
+                ${_fs}@${_snapshot} ${_cfs}
         else
-            eval "zfs clone ${_zfsconfig} ${_fs}${_snapshot} ${_cfs}"
+            eval "zfs clone ${_zfsconfig} ${_fs}@${_snapshot} ${_cfs}"
         fi
     done
-
-    _clone_dataset=${pool}/iocage/jails/${uuid}
 
     __update_mountpoint ${_clone_dataset}
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_clone_dataset})
