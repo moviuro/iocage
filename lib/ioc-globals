@@ -3,6 +3,9 @@
 # Auto UUID
 uuid=$(uuidgen)
 
+# define the prefix
+module="org.freebsd.iocage"
+
 # pkg list, only used with the create subcommand
 pkglist="none"
 

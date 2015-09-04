@@ -411,7 +411,7 @@ __set_dataset_ioc_prop () {
     _dataset=${2}
     _pname=${_property%%=*}
 
-    zfs set org.freebsd.iocage:"${_property}" ${_dataset}
+    zfs set ${module}:"${_property}" ${_dataset}
 }
 
 __console () {
