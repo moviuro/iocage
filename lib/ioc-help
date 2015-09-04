@@ -216,8 +216,8 @@ DESCRIPTION
 
          The following properties retain their value when a jail is reset:
 
-           uuid, tag, type, jail_zfs_dataset, jail_zfs_pool, vnet*_mac, release,
-           hack88, resolver, ip4_autostart, ip4_autoend
+           uuid, tag, type, jail_zfs_dataset, vnet*_mac, release, hack88,
+           resolver, ip4_autostart, ip4_autoend
 
          You can also reset every jail at once by using the keyword "ALL".
 
@@ -746,21 +746,15 @@ PROPERTIES
          Default: off
          Source: local
 
-     jail_zfs_dataset=iocage/jails/UUID/root/data | zfs_filesystem
+     jail_zfs_dataset=DEFAULT/iocage/jails/UUID/root/data | zfs_filesystem
          This is the dataset to be jailed and fully handed over to a jail.
-         Takes the ZFS filesystem name without pool name.
+         Takes the full ZFS filesystem name including the pool name. "DEFAULT"
+         may be used as a keyword to represent the default pool iocage uses.
          NOTE: only valid if jail_zfs=on.  By default the mountpoint is set to
          none, to mount this dataset set its mountpoint inside the jail i.e.
          "zfs set mountpoint=/data full-dataset-name" and issue "mount -a".
 
-         Default: iocage/jails/UUID/root/data
-         Source: local
-
-     jail_zfs_pool=DEFAULT | zpool
-         This is the pool for jail_zfs_dataset. The keyword DEFAULT uses the
-         currently active pool, the same one the jails are stored on.
-
-         Default: DEFAULT
+         Default: DEFAULT/iocage/jails/UUID/root/data
          Source: local
 
      securelevel=3 | 2 | 1 | 0 | -1

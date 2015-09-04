@@ -117,8 +117,7 @@ type="jail"
 release=$(echo "${supported_releases}" | head -n1)
 hostid=$(cat /etc/hostid)
 jail_zfs="off"
-jail_zfs_dataset="iocage/jails/${uuid}/root/data"
-jail_zfs_pool="DEFAULT"
+jail_zfs_dataset="DEFAULT/iocage/jails/${uuid}/root/data"
 mount_procfs=0
 hack88=0
 # iocage_version is set in the iocage script
@@ -242,7 +241,6 @@ CONF_CUSTOM="tag
              cpuset
              jail_zfs
              jail_zfs_dataset
-             jail_zfs_pool
              release
              hack88
              iocage_version"
