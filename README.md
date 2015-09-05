@@ -13,7 +13,8 @@ features and ideas. It is a sandbox for coming up with creative solutions to
 problems and for testing changes. This is not a drop in replacement for upstream
 iocage, it is not intended to be used in any production environment, there is no
 goal of overtaking the upstream project. The objective is to write clean code
-and innovate on features.
+and implement features that are necessary for use cases the original authors
+have expressed no desire to support.
 
 This fork focuses on code quality and correctness. A major cleanup of the
 upstream code base was performed to make iocage more pleasant to work on. By
@@ -22,17 +23,20 @@ concise and easier to reason about, and introducing a separation between user
 interfaces and the implementation of functionality, this fork makes new features
 easier to introduce.
 
-Users should be aware that this repository may at times be broken. Testing and
-bug reports are very welcome. The documentation is unfortunately difficult to
-maintain. Currently the `iocage help` documentation is the most accurate.
+Users should be aware that this repository may at times be broken. This is a
+development tree that potentially introduces breaking changes, and the code in
+this tree should not be considered release quality or suitable for production
+use at this time. Testing and bug reports are very welcome. The documentation is
+unfortunately difficult to maintain. Currently the `iocage help` documentation
+is the most accurate and up-to-date reference for using the latest changes.
 
 The jail formats of this fork and upstream iocage are basically compatible, but
 the command line interfaces are diverging. The goals of enhancing our jail
 format and command line interface mean that upstream compatibility takes a lower
 priority.
 
-- **IRC**: For general iocage discussion and brainstorming on experimental
-           feature ideas for iocage, feel free to join [Freenode #freqlabs](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23freqlabs).
+- **IRC**: For general discussion and brainstorming on experimental
+           feature ideas, feel free to join [Freenode #freqlabs](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23freqlabs).
 
 **CURRENT GOALS**
 - Enhance iocage with more zfs-like functionality, syntax
@@ -42,7 +46,7 @@ priority.
 - Avoid wasteful overhead, use of global state
 - Track useful features from upstream
 
-**FUTURE IDEAS**
+**FUTURE GOALS**
 - Extend the basejail concept to allow for specifying a custom base
 - Hierarchical jails, layering/inheritance
 - Consolidate redundant documentation files
@@ -73,7 +77,7 @@ priority.
   the priority of the jail
 - Improved error messages
 - Getopts option parsing for more flexible and familiar operation
-- Versioned jail format for keeping jail properties compatible with iocage
+- Versioned jail format for keeping track of changes between iocage versions
 - Prefix matching for tags in addition to UUIDs
 - A user property is used for pool activation rather than hijacking the comment
 - An alternate pool may be specified for jail_zfs_dataset with the jail_zfs_pool
