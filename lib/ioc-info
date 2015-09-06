@@ -66,11 +66,30 @@ __find_jail_by_name () {
     _name=${1}
 
     _uuid_regex="[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
+
+    # How this pipeline works:
+    # * zfs ...
+    # List the UUID and tag of every jail, sorted by tag.
+    #
+    # * egrep ...
+    # Filter using the UUID regexp to eliminate any datasets that aren't jails.
+    #
+    # * awk ...
+    # Try to match the given name as a prefix of either the UUID or the tag. If
+    # a match is found, print it. If the name is an exact match of the tag, end
+    # the search. Ending when the tag is an exact match allows tags that are a
+    # prefix of other tags to be used. Because the tags are sorted, the exact
+    # match will always be first.
     _matched=$(zfs list -Hrd1 -o ${module}:host_hostuuid,${module}:tag \
                    -s ${module}:tag \
                    ${pool}/iocage/jails \
                | egrep -w "${_uuid_regex}" \
-               | awk -v name="^${_name}" '$1 ~ name || $2 ~ name { print $1 }')
+               | awk -v name="^${_name}" \
+                     '$1 ~ name || $2 ~ name {
+                          print $1;
+                          if ($2 ~ name"$")
+                              exit;
+                      }')
     _count=$(__wc ${_matched})
 
     case ${_count} in
