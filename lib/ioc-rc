@@ -34,7 +34,7 @@ __start_jail () {
 
     _tag=$(__get_dataset_ioc_prop tag ${_dataset})
 
-    echo "${_id} Starting (tag: \"${_tag}\")"
+    echo "${_id} Starting (${_tag})"
 
     _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
     if [ "${_jail_type}" = "basejail" ] ; then

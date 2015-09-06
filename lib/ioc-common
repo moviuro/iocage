@@ -27,7 +27,7 @@ __stderr () {
 #
 # ${1}: error message to display
 __error () {
-    __stderr "  ERROR: ${1}"
+    __stderr "ERROR: ${1}"
 }
 
 # Print an error message to stderr and exit the current shell ----------
@@ -45,7 +45,7 @@ __fatal_error () {
 #
 # ${1}: message to display
 __info () {
-    __stderr "  INFO: ${1}"
+    __stderr "INFO: ${1}"
 }
 
 # Print the number of parameters passed to this function ---------------

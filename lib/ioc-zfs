@@ -23,7 +23,7 @@ __create_basejail () {
 
     _release=${1}
 
-    __stderr -n "  INFO: Creating basejail ZFS datasets..."
+    __stderr -n "INFO: Creating basejail ZFS datasets..."
 
     for _fs in ${bfs_list} ; do
         zfs create -o compression=lz4 -p \
@@ -375,12 +375,18 @@ __clean_releases () {
     _running=$(jls name \
                | awk '/^ioc-/ { sub(/^ioc-/, "", $1); printf "%s|", $1 }')
 
-    # Create a list of running clones by listing jail datasets alongside their
-    # origin and matching the origin against the datasets to be removed as well
-    # as the UUID against the running jails. To match basejails this way
-    # requires the list depth to be set to 3, so we reduce the output to
-    # unique datasets by splitting the dataset name into parts and only
-    # printing the UUID portion, then piping through uniq.
+    # Pipeline description:
+    # - zfs ...
+    # List jail datasets alongside their origin. To match basejails requires the
+    # list depth to be set to 3,
+    #
+    # - awk ...
+    # Match the origin against the datasets to be removed and the UUID against
+    # the running jails. Split the dataset name into parts and print the UUID \
+    # portion.
+    #
+    # - uniq
+    # Eliminate duplicate UUIDs that appear due the the depth of the listing.
     _clones=$(zfs list -Hrd3 -o name,origin ${pool}/iocage/jails \
               | awk -v origins="^${pool}/iocage/(releases|base)/" \
                     -v running="${_running%|}" \

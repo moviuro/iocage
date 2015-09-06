@@ -5,7 +5,7 @@ __record () {
 
     _action=${1}
     _dataset=${2}
-    
+
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
@@ -15,7 +15,7 @@ __record () {
     if [ ${_action} == "start" ] ; then
         _union_mount=$(mount -t unionfs | grep -c ${_fulluuid})
 
-        echo "* Recording to: ${_mountpoint}/recorded"
+        echo "Recording to: ${_mountpoint}/recorded"
 
         if [ ${_union_mount} -lt 1 ] ; then
             mount -t unionfs -o noatime,copymode=transparent \
@@ -24,7 +24,7 @@ __record () {
 
     elif [ ${_action} == "stop" ] ; then
         umount -ft unionfs "${_mountpoint}/root" > /dev/null 2>&1
-        echo "* Stopped recording to: ${_mountpoint}/recorded"
+        echo "Stopped recording to: ${_mountpoint}/recorded"
 
         find "${_mountpoint}/recorded/" -type d -empty -exec rm -rf {} \; \
              > /dev/null 2>&1
@@ -43,26 +43,26 @@ __package () {
     local _dataset _fulluuid _mountpoint
 
     _dataset=${1}
-    
+
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
 
     if [ ! -d "${_mountpoint}/recorded" ] ; then
-        echo "  ERROR: Nothing to package, missing recorded directory!"
-        echo "  HINT: Have you recorded the jail?"
+        __error "Nothing to package, missing recorded directory!"
+        __stderr "HINT: Have you recorded the jail?"
         exit 1
     fi
 
     [ -d "${iocroot}/packages" ] ||
         mkdir "${iocroot}/packages"
 
-    echo "* Creating package..."
+    echo "Creating package..."
     tar -cvJf "${iocroot}/packages/${_fulluuid}.tar.xz" \
         -C "${_mountpoint}/recorded" . &&
         sha256 -q "${iocroot}/packages/${_fulluuid}.tar.xz" \
                > "${iocroot}/packages/${_fulluuid}.sha256"
-    echo "* Package saved to: ${iocroot}/packages/${_fulluuid}.tar.xz"
-    echo "* Checksum created: ${iocroot}/packages/${_fulluuid}.sha256"
+    echo "Package saved to: ${iocroot}/packages/${_fulluuid}.tar.xz"
+    echo "Checksum created: ${iocroot}/packages/${_fulluuid}.sha256"
 }
 
 __import () {
@@ -91,20 +91,20 @@ __import () {
         __fatal_error "Same UUID is matching both a package and an image."
 
     if [ ${_pcount} -gt 0 ] ; then
-        echo "* Found package ${_package}"
-        echo "* Importing package ${_package}"
+        echo "Found package ${_package}"
+        echo "Importing package ${_package}"
 
         [ -f "${_pcksum}" ] ||
             __fatal_error "Missing checksum file!"
 
         [ "${_new_cksum}" == "${_old_cksum}" ] ||
             __fatal_error "Checksum mismatch."
-        
+
         tar -xvJf "${_package}" -C "${_mountpoint}/root"
 
     elif [ ${_icount} -gt 0 ] ; then
-        echo "* Found image ${_image}"
-        echo "* Importing image ${_image}"
+        echo "Found image ${_image}"
+        echo "Importing image ${_image}"
 
         [ -f "${_icksum}" ] ||
             __fatal_error "Missing checksum file!"
@@ -137,7 +137,7 @@ __export () {
     local _dataset _fulluuid _mountpoint
 
     _dataset=${1}
-    
+
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     ! __is_running ${_fulluuid} ||
         __fatal_error "${_fulluuid} is running! Stop jail before exporting."
@@ -145,15 +145,15 @@ __export () {
     [ -d ${iocroot}/images ] ||
         mkdir ${iocroot}/images
 
-    echo "* Exporting ${_fulluuid}"
+    echo "Exporting ${_fulluuid}"
 
     _mountpoint=$(__get_dataset_zfs_prop mountpoint ${_dataset})
-    
+
     tar -cvJf "${iocroot}/images/${_fulluuid}.tar.xz" \
         -C "${_mountpoint}/root" . &&
         sha256 -q ${iocroot}/images/${_fulluuid}.tar.xz \
         > ${iocroot}/images/${_fulluuid}.sha256
 
-    echo "* Image saved to: ${iocroot}/images/${_fulluuid}.tar.xz"
-    echo "* Checksum created: ${iocroot}/images/${_fulluuid}.sha256"
+    echo "Image saved to: ${iocroot}/images/${_fulluuid}.tar.xz"
+    echo "Checksum created: ${iocroot}/images/${_fulluuid}.sha256"
 }
