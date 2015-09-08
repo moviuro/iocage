@@ -548,23 +548,41 @@ PROPERTIES
          Setting this property to anything other than none will try to
          configure a default route inside a VNET jail.
 
+         Default: none
+         Source: route(8)
+
      defaultrouter6=none | ip6address
          Setting this property to anything other than none will try to
          configure a default IPv6 route inside a VNET jail.
 
-     resolver=copy | none | nameserver IP;nameserver IP;search domain.local
-         Sets the jail's resolver (resolv.conf).  Fields must be ; delimited
-         which are translated to newlines in resolv.conf.
+         Default: none
+         Source: route(8)
 
-         If the resolver is set to "copy" (default), the jail will inherit the
-         host's resolv.conf file.
+     resolver=none | copy | nameserver IP;nameserver IP;search domain.local
+         Sets the jail's resolver (resolv.conf).
 
-         If the resolver is set to "none", the jail's resolv.conf will not be
-         touched by iocage.
+         If the resolver is set to "none", (default) the jail's resolv.conf will
+         not be touched by iocage.  A resolv.conf file must be manually created
+         in the jail and managed by the administrator.
 
-     ip6.addr, ip6.saddrsel, ip6
-         A set of IPv6 options for the prison, the counterparts to ip4.addr,
-         ip4.saddrsel and ip4 above.
+         If the resolver is set to "copy", the jail will inherit the host's
+         resolv.conf file.  When the jail starts, /etc/resolv.conf is copied
+         into the jail from the host, replacing the file in the jail if it
+         already exists.
+
+         If the resolver is set to something other than "none" or "copy" then
+         the string is transformed into a resolv.conf file for the jail at start
+         time, replacing the file in the jail if it already exists.  Fields must
+         be ; delimited, which are translated to newlines in the resulting file.
+
+         Default: none
+         Source: resolver(5)
+
+     ip6_addr, ip6_saddrsel, ip6
+         A set of IPv6 options for the prison, the counterparts to ip4_addr,
+         ip4_saddrsel and ip4 above.
+
+         Source: jail(8)
 
      interfaces=vnet0:bridge0,vnet1:bridge1 | vnet0:bridge0
          By default there are two interfaces specified with their bridge
@@ -729,7 +747,8 @@ PROPERTIES
          operate only on a mount-point where the jail's chroot directory is
          located.
 
-         Default: 2. jail(8)
+         Default: 2
+         Source: jail(8)
 
      children_max=0 | ...
          The number of child jails allowed to be created by this jail (or by
