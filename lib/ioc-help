@@ -478,13 +478,9 @@ PROPERTIES
          Default: auto-guess
          Source: local
 
-     ip4_addr="interface|ip-address/netmask"
+     ip4_addr="interface|ip-address/netmask param ..."
 
          The IPv4 address for VNET and shared IP jails.
-
-         Form is: interface|ip-address/netmask
-         Multiple interfaces:
-         "interface|ip-address/netmask,interface|ip-address/netmask"
 
          For shared IP jails if an interface is given before the IP address, an
          alias for the address will be added to that interface, as it is with
@@ -494,6 +490,11 @@ PROPERTIES
 
          If a netmask in either dotted-quad or CIDR form is given after IP
          address, it will be used when adding the IP alias.
+
+         Additional parameters for ifconfig(8) may optionally be supplied
+         following the address.
+
+         Multiple addresses are configured by using a comma separated list.
 
          If the AUTOIP4 tag is used in place of an ip-address, the IP address
          will be automatically assigned at first start of the jail.  This
@@ -619,7 +620,7 @@ PROPERTIES
          to a value lower than 2.  Devfs rules and rulesets cannot be viewed or
          modified from inside a jail.
 
-         NOTE: It is important that only appropriate device nodes in devfs be
+         Note: It is important that only appropriate device nodes in devfs be
          exposed to a jail; access to disk devices in the jail may permit
          processes in the jail to bypass the jail sandboxing by modifying files
          outside of the jail.  See devfs(8) for information on how to use devfs
@@ -773,7 +774,7 @@ PROPERTIES
      jail_zfs=on | off
          Enables automatic ZFS jailing inside the jail.  Assigned ZFS dataset
          will be fully controlled by the jail.
-         NOTE: Setting this to "on" automatically enables allow_mount=1
+         Note: Setting this to "on" automatically enables allow_mount=1
          enforce_statfs=1 and allow_mount_zfs=1! These are dependent options
          required for ZFS management inside a jail.
 
@@ -784,7 +785,7 @@ PROPERTIES
          This is the dataset to be jailed and fully handed over to a jail.
          Takes the full ZFS filesystem name including the pool name. "DEFAULT"
          may be used as a keyword to represent the default pool iocage uses.
-         NOTE: only valid if jail_zfs=on.  By default the mountpoint is set to
+         Note: only valid if jail_zfs=on.  By default the mountpoint is set to
          none, to mount this dataset set its mountpoint inside the jail i.e.
          "zfs set mountpoint=/data full-dataset-name" and issue "mount -a".
 
