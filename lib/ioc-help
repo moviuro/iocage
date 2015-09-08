@@ -164,9 +164,9 @@ DESCRIPTION
          Examples:
 
          Create a standard jail with the tag "www01" and install the packages
-         listed in a file:
+         listed in a file, using the resolv.conf of the host:
 
-           # iocage create tag=www01 pkglist=$HOME/my-pkgs.txt
+           # iocage create tag=www01 pkglist=$HOME/my-pkgs.txt resolver="copy"
 
          Create a "basejail" type jail with the tag "mybasejail":
 
@@ -462,6 +462,10 @@ PROPERTIES
          A text file containing one package per line.  These will be auto-
          installed when a jail is created.  Works only in combination with the
          create subcommand.
+
+         Note: A working resolver is required for this feature. The default
+         resolver setting creates the jail without a resolver configured. Set
+         resolver in the user defaults or on the command line for this to work.
 
          Default: none
          Source: local
