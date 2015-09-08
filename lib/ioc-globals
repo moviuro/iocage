@@ -295,7 +295,7 @@ __term_supports_colors () {
 
     _colors=$(tput colors 2>/dev/null)
 
-    if [ -n "${_colors}" -a "${_colors}" -gt 2 ] ; then
+    if [ -n "${_colors}" ] && [ "${_colors}" -gt 2 ] ; then
         _result=0 # true
     else
         _result=1 # false

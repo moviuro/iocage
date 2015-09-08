@@ -216,10 +216,13 @@ __legacy_start () {
     _ip4_addr_prop=$(__get_dataset_ioc_prop ip4_addr ${_dataset})
     _ip6_addr_prop=$(__get_dataset_ioc_prop ip6_addr ${_dataset})
 
-    # Replace DEFAULT with the actual default interface name if needed
+    # Replace DEFAULT with the actual default interface name if needed,
+    # and convert ', ' to ',' because jail(8) is a little picky.
     _default_iface=$(netstat -f inet -nrW | awk '/^default/ { print $6 }')
-    _ip4_addr=$(__sub_default_iface ${_default_iface} "${_ip4_addr_prop}")
-    _ip6_addr=$(__sub_default_iface ${_default_iface} "${_ip6_addr_prop}")
+    _ip4_addr=$(__sub_default_iface ${_default_iface} "${_ip4_addr_prop}" \
+                | sed -e 's/, /,/g')
+    _ip6_addr=$(__sub_default_iface ${_default_iface} "${_ip6_addr_prop}" \
+                | sed -e 's/, /,/g')
 
     _ip4=$(__get_dataset_ioc_prop ip4 ${_dataset})
 
