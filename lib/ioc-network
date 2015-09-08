@@ -75,7 +75,7 @@ __networking () {
 __start_networking () {
     local _dataset _uuid _jid _ip4 _ip6 _defaultgw _defaultgw6 _nics
     local _mac_offset _i _nic _bridge _memberif _brmtu _epair_a _epair_b
-    local _mac_epair_a _mac_epair_b _addrs _iface _ip
+    local _mac_epair_a _mac_epair_b _iface _ip
 
     _dataset=${1}
 
@@ -110,26 +110,26 @@ __start_networking () {
 
     if [ "${_ip4}" != "none" ] ; then
         IFS=','
-        _addrs=$(echo ${_ip4})
-        unset IFS
-
-        for _i in ${_addrs} ; do
+        for _i in ${_ip4} ; do
+            unset IFS
             _iface=${_i%%|*}
             _ip=${_i#*|}
             jexec ioc-${_uuid} ifconfig ${_iface} ${_ip} up
+            IFS=','
         done
+        unset IFS
     fi
 
     if [ "${_ip6}" != "none" ] ; then
         IFS=','
-        _addrs=$(echo ${_ip6})
-        unset IFS
-
-        for _i in ${_addrs} ; do
+        for _i in ${_ip6} ; do
+            unset IFS
             _iface=${_i%%|*}
             _ip=${_i#*|}
             jexec ioc-${_uuid} ifconfig ${_iface} inet6 ${_ip} up
+            IFS=','
         done
+        unset IFS
     fi
 
     if [ "${_defaultgw}" != "none" ] ; then
@@ -254,27 +254,31 @@ __stop_legacy_networking () {
 
     _ip4_addr=$(__get_dataset_ioc_prop ip4_addr ${_dataset})
     if [ "${_ip4_addr}" != "none" ] ; then
-        IFS=','
         _addrs=$(echo ${_ip4_addr} | sed "s/DEFAULT|/${_default_iface}|/g")
-        unset IFS
 
+        IFS=','
         for _ip in ${_addrs} ; do
+            unset IFS
             _iface=${_ip%%|*}
             _ip4=${_ip#*|}
             ifconfig ${_iface} ${_ip4%%/*} -alias
+            IFS=','
         done
+        unset IFS
     fi
 
     _ip6_addr=$(__get_dataset_ioc_prop ip6_addr ${_dataset})
     if [ "${_ip6_addr}" != "none" ] ; then
-        IFS=','
         _addrs=$(echo ${_ip6_addr} | sed "s/DEFAULT|/${_default_iface}|/g")
-        unset IFS
 
+        IFS=','
         for _ip in ${_addrs} ; do
+            unset IFS
             _iface=${_ip%%|*}
             _ip6=${_ip#*|}
             ifconfig ${_iface} inet6 ${_ip6%%/*} -alias
+            IFS=','
         done
+        unset IFS
     fi
 }

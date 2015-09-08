@@ -19,8 +19,6 @@ else
     vnet="off"
 fi
 
-ipv6="on" # This should be either exposed or eliminated.
-
 interfaces="vnet0:bridge0,vnet1:bridge1"
 host_hostname=${uuid}
 exec_fib=0

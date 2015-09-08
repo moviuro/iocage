@@ -207,7 +207,7 @@ __vnet_start () {
 __legacy_start () {
     local _dataset _uuid _mountpoint _ip4_addr_prop _ip6_addr_prop \
           _autoip4 _default_iface _ip4_addr _ip6_addr _ip4 _ip6 \
-          _ip4_addr_propline _ip6_addr_propline _fdescfs _tmpfs _ip6_addrsel
+          _fdescfs _tmpfs
 
     _dataset=${1}
 
@@ -226,14 +226,9 @@ __legacy_start () {
     # This is mostly a temporary workaround for
     # https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=196474
     if [ "${_ip4}" = "inherit" ] ; then
-        _ip4="inherit"
         _ip6="inherit"
-        _ip4_addr_propline=""
-        _ip6_addr_propline=""
     else
         _ip6=$(__get_dataset_ioc_prop ip6 ${_dataset})
-        _ip4_addr_propline="ip4.addr=${_ip4_addr}"
-        _ip6_addr_propline="ip6.addr=${_ip6_addr}"
     fi
 
     if [ "$(uname -U)" = "903000" ];
@@ -247,20 +242,13 @@ __legacy_start () {
                                                            ${_dataset})"
     fi
 
-    if [ "${ipv6}" = "on" ] ; then
-        _ip6_addrsel=$(__get_dataset_ioc_prop ip6_saddrsel ${_dataset})
-        _ip6_props="${_ip6_addr_propline} \
-                    ip6.saddrsel=${_ip6_addrsel} \
-                    ip6=${_ip6}"
-    else
-        _ip6_props=""
-    fi
-
     jail -c \
-         ${_ip4_addr_propline} \
+         ${_ip4_addr:+ip4.addr="${_ip4_addr}"} \
          ip4.saddrsel="$(__get_dataset_ioc_prop ip4_saddrsel ${_dataset})" \
          ip4="${_ip4}" \
-         ${_ip6_props} \
+         ${_ip6_addr:+ip6.addr="${_ip6_addr}"} \
+         ip6.saddrsel="$(__get_dataset_ioc_prop ip6_saddrsel ${_dataset})" \
+         ip6="${_ip6}" \
          name="ioc-${_uuid}" \
          host.hostname="$(__get_dataset_ioc_prop host_hostname ${_dataset})" \
          path="${_mountpoint}/root" \
