@@ -781,7 +781,7 @@ PROPERTIES
          Default: off
          Source: local
 
-     jail_zfs_dataset=DEFAULT/iocage/jails/UUID/root/data | zfs_filesystem
+     jail_zfs_dataset=DEFAULT/iocage/jails/UUID/data | zfs_filesystem
          This is the dataset to be jailed and fully handed over to a jail.
          Takes the full ZFS filesystem name including the pool name. "DEFAULT"
          may be used as a keyword to represent the default pool iocage uses.
@@ -789,7 +789,7 @@ PROPERTIES
          none, to mount this dataset set its mountpoint inside the jail i.e.
          "zfs set mountpoint=/data full-dataset-name" and issue "mount -a".
 
-         Default: DEFAULT/iocage/jails/UUID/root/data
+         Default: DEFAULT/iocage/jails/UUID/data
          Source: local
 
      securelevel=3 | 2 | 1 | 0 | -1

@@ -58,7 +58,7 @@ __start_jail () {
     _jzfs=$(__get_dataset_ioc_prop jail_zfs ${_dataset})
     if [ "${_jzfs}" = "on" ] ; then
         _jzfs_dataset=$(__get_dataset_ioc_prop jail_zfs_dataset ${_dataset} \
-                        | sed -e "s|^DEFAULT/|${pool}/|")
+                        | sed -e "s|^DEFAULT|${pool}|")
         __set_dataset_ioc_prop allow_mount=1 ${_dataset}
         __set_dataset_ioc_prop enforce_statfs=1 ${_dataset}
         __set_dataset_ioc_prop allow_mount_zfs=1 ${_dataset}
