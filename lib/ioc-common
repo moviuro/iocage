@@ -427,14 +427,14 @@ __console () {
 __exec () {
     local _jexecopts _opt _dataset _fulluuid _exec_fib _jexec
 
-    OPTIND=1
     _jexecopts=""
 
     # check for -U or -u to pass to jexec
+    OPTIND=1
     while getopts ":u:U:" _opt ; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}" ;;
-            "?") __fatal_error "Invalid exec option: ${OPTARG}" ;;
+            "?") __fatal_error "Invalid exec option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -457,14 +457,14 @@ __exec () {
 __exec_all () {
     local _jexecopts _opt _jails _jail
 
-    OPTIND=1
     _jexecopts=""
 
     # check for -U or -u to pass to jexec
+    OPTIND=1
     while getopts ":u:U:" _opt ; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}" ;;
-            "?") __fatal_error "Invalid exec option: ${OPTARG}" ;;
+            "?") __fatal_error "Invalid exec option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))

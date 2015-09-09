@@ -260,13 +260,14 @@ __cmd_clean () {
     _releases=0
     _jails=0
 
+    OPTIND=1
     while getopts ":farj" _opt; do
         case ${_opt} in
             "f") _force=1 ;;
             "a") _all=1 ;;
             "r") _releases=1 ;;
             "j") _jails=1 ;;
-            "?") __fatal_error "Invalid command syntax!" ;;
+            "?") __fatal_error "Invalid clean option: -${OPTARG}" ;;
         esac
     done
 
@@ -307,11 +308,12 @@ __cmd_clone () {
     _props=0
     _fstab=0
 
+    OPTIND=1
     while getopts ":FP" _opt ; do
         case ${_opt} in
             "P") _props=1 ;;
             "F") _fstab=1 ;;
-            "?") __fatal_error "Invalid option: -${OPTARG}" ;;
+            "?") __fatal_error "Invalid clone option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -364,10 +366,11 @@ __cmd_destroy () {
 
     _force=0
 
+    OPTIND=1
     while getopts ":f" _opt ; do
         case ${_opt} in
             "f") _force=1 ;;
-            "?") __fatal_error "Invalid command syntax!" ;;
+            "?") __fatal_error "Invalid destroy option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -415,11 +418,12 @@ __cmd_df () {
     _noheader=0
     _parsable=0
 
+    OPTIND=1
     while getopts ":Hp" _opt ; do
         case ${_opt} in
             "H") _noheader=1 ;;
             "p") _parsable=1 ;;
-            "?") __fatal_error "Invalid command syntax." ;;
+            "?") __fatal_error "Invalid df option: -${OPTARG}" ;;
         esac
     done
 
@@ -435,13 +439,14 @@ __cmd_df () {
 __cmd_exec () {
     local _jexecopts _opt _name _dataset
 
-    # check for -U or -u to pass to jexec
-    OPTIND=1
     _jexecopts=""
+
+    # Check for -U or -u to pass to jexec.
+    OPTIND=1
     while getopts ":u:U:" _opt ; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}";;
-            "?")    __fatal_error "Invalid exec option: ${_opt}";;
+            "?") __fatal_error "Invalid exec option: -${OPTARG}";;
         esac
     done
     shift $((OPTIND - 1))
@@ -524,6 +529,7 @@ __cmd_get () {
 
     _noheader=0
 
+    OPTIND=1
     while getopts ":H" _opt ; do
         case ${_opt} in
             "H") _noheader=1 ;;
@@ -618,6 +624,7 @@ __cmd_list () {
     _releases=0
     _templates=0
 
+    OPTIND=1
     while getopts ":Hblnrt" _opt ; do
         case ${_opt} in
             "H") _noheader=1 ;;
@@ -626,7 +633,7 @@ __cmd_list () {
             "n") _nonioc=1 ;;
             "r") _releases=1 ;;
             "t") _templates=1 ;;
-            "?") __fatal_error "Invalid command syntax." ;;
+            "?") __fatal_error "Invalid list option: -${OPTARG}" ;;
         esac
     done
 
@@ -737,10 +744,11 @@ __cmd_restart () {
 
     _hard=0
 
+    OPTIND=1
     while getopts ":H" _opt ; do
         case ${_opt} in
             "H") _hard=1 ;;
-            "?") __fatal_error "Invalid command syntax." ;;
+            "?") __fatal_error "Invalid restart option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -883,7 +891,7 @@ __cmd_status () {
     while getopts ":H" _opt ; do
         case ${_opt} in
             "H") _noheader=1 ;;
-            "?") __fatal_error "Unsupported option: -${OPTARG}" ;;
+            "?") __fatal_error "Invalid status option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
