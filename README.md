@@ -26,9 +26,7 @@ easier to introduce.
 Users should be aware that this repository may at times be broken. This is a
 development tree that potentially introduces breaking changes, and the code in
 this tree should not be considered release quality or suitable for production
-use at this time. Testing and bug reports are very welcome. The documentation is
-unfortunately difficult to maintain. Currently the `iocage help` documentation
-is the most accurate and up-to-date reference for using the latest changes.
+use at this time. Testing and bug reports are very welcome.
 
 The jail formats of this fork and upstream iocage are basically compatible, but
 the command line interfaces are diverging. The goals of enhancing our jail
@@ -49,7 +47,6 @@ priority.
 **FUTURE GOALS**
 - Extend the basejail concept to allow for specifying a custom base
 - Hierarchical jails, layering/inheritance
-- Consolidate redundant documentation files
 - Test suite for proving correctness
 
 **NON-GOALS**
@@ -116,8 +113,6 @@ Start the jail:
         options         RCTL   # same as above
 
 **OTHER CONSIDERATIONS**
-- Documentation needs work, currently `iocage help`is the most maintained
-  reference
 - For resource limiting please read rctl(8)
 - For the explanations on jail properties read jail(8)
 - Create bridge0 and bridge1 interfaces
