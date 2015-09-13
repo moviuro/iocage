@@ -66,11 +66,6 @@ __parse_cmd () {
                 __cmd_exec "${@}"
                 exit
                 ;;
-            export)
-                __require_root
-                __cmd_export "${@}"
-                exit
-                ;;
             fetch)
                 __require_root
                 __cmd_fetch "${@}"
@@ -84,19 +79,9 @@ __parse_cmd () {
                 __help
                 exit
                 ;;
-            init-host)
-                __require_root
-                __cmd_init_host "${@}"
-                exit
-                ;;
             inuse)
                 __require_root
                 __cmd_inuse "${@}"
-                exit
-                ;;
-            import)
-                __require_root
-                __cmd_import "${@}"
                 exit
                 ;;
             limits)
@@ -106,11 +91,6 @@ __parse_cmd () {
                 ;;
             list)
                 __cmd_list "${@}"
-                exit
-                ;;
-            package)
-                __require_root
-                __cmd_package "${@}"
                 exit
                 ;;
             promote)
@@ -126,11 +106,6 @@ __parse_cmd () {
             rcshutdown)
                 __require_root
                 __cmd_rcshutdown
-                exit
-                ;;
-            record)
-                __require_root
-                __cmd_record "${@}"
                 exit
                 ;;
             reset)
@@ -465,18 +440,6 @@ __cmd_exec () {
     fi
 }
 
-__cmd_export () {
-    local _name _dataset
-
-    _name=${1}
-    __check_name "${_name}"
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
-
-    __export ${_dataset}
-}
-
 __cmd_fetch () {
     local _release _match _rel
 
@@ -555,20 +518,6 @@ __cmd_get () {
     fi
 }
 
-__cmd_init_host () {
-    local _remote _pool
-
-    _remote=${1}
-    __require_not_empty "${_remote}" "Missing arguments!"
-    __require_single_word "${_remote}" "Invalid remote host!"
-
-    _pool=${2}
-    __require_not_empty "${_pool}" "Missing pool name!"
-    __require_single_word "${_pool}" "Invalid pool name!"
-
-    __init_host ${_remote} ${_pool}
-}
-
 __cmd_inuse () {
     local _name _dataset
 
@@ -584,17 +533,6 @@ __cmd_inuse () {
 
         __rctl_inuse ${_dataset}
     fi
-}
-
-__cmd_import () {
-    local _name
-
-    _name=${1}
-    __check_name "${_name}"
-
-    shift
-    __export_props "${@}"
-    __import ${_name}
 }
 
 __cmd_limits () {
@@ -652,18 +590,6 @@ __cmd_list () {
     fi
 }
 
-__cmd_package () {
-    local _name _dataset
-
-    _name=${1}
-    __check_name "${_name}"
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
-
-    __package ${_dataset}
-}
-
 __cmd_promote () {
     local _name _dataset
 
@@ -682,23 +608,6 @@ __cmd_rcboot () {
 
 __cmd_rcshutdown () {
     __rc_jails shutdown
-}
-
-__cmd_record () {
-    local _action _name _dataset
-
-    _action=${1}
-    __require_not_empty "${_action}" "Missing arguments!"
-    [ "${_action}" == "start" -o "${_action}" == "stop" ] ||
-        __fatal_error "Invalid action! Must be one of start|stop"
-
-    _name=${2}
-    __check_name "${_name}"
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
-
-    __record ${_action} ${_dataset}
 }
 
 __cmd_reset () {

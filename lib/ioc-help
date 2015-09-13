@@ -9,7 +9,6 @@ SYNOPSIS
      iocage activate [zpool]
      iocage fetch [release=rel] [ftpproto=proto] [ftphost=host]
             [ftpdir=path] [ftpfiles=list]
-     iocage init-host host zpool
      iocage create [-b|-c|-e] [property=value]...
      iocage clone [-FP] uuid|tag[@snapshot] [property=value]...
      iocage destroy [-f] uuid|tag|ALL
@@ -40,10 +39,6 @@ SYNOPSIS
      iocage runtime uuid|tag
      iocage update uuid|tag
      iocage upgrade uuid|tag [release=rel]
-     iocage record start|stop uuid|tag
-     iocage package uuid|tag
-     iocage export uuid|tag
-     iocage import uuid [property=value]...
      iocage defaults
      iocage version|--version
      iocage help
@@ -136,12 +131,6 @@ DESCRIPTION
 
          Newly created jails or basejails will automatically have the latest
          updates applied.
-
-     init-host host zpool
-
-         Initialize a remote host for iocage.  iocage will send all required ZFS
-         filesystems over the network to the host.  This requires SSH working
-         keys installed for root.
 
      create [-b|-c|-e] [property=value]...
 
@@ -415,31 +404,6 @@ DESCRIPTION
          For this the release must be locally available.  The basejail will
          re-clone its filesystems from the new release either by issuing the
          upgrade command or at next jail start.
-
-     record start|stop uuid|tag
-
-         The record function will record every changed file in a directory
-         called /iocage/jails/UUID/recorded.  This is achieved by using a
-         unionfs overlay mount.  Used for differential package creation.
-
-     package uuid|tag
-
-         Package recorded jail session into /iocage/packages.  Creates SHA256
-         checksum and prunes empty directories, files and some residual files
-         like utx.* and .history.  Before packaging any jails, make sure no
-         unwanted files contaminated or leaked into the recorded package.
-
-     export uuid|tag
-
-         Export a complete jail.  An archive file is created in /iocage/images
-         with SHA256 checksum.  Jail must be in stopped state before exporting.
-
-     import uuid [property=value]...
-
-         Import full jail images or differential packages.  Images need to be
-         present in /iocage/images and packages in /iocage/packages along with
-         checksum files.  You can use short UUIDs, but do not specify the full
-         filename; only give the UUID.
 
      defaults
 
@@ -1325,29 +1289,13 @@ EXAMPLES
 
        # iocage clone UUID-of-template tag=myjail
 
-     Record all changing files in a jail:
-
-       # iocage record start UUID
-
-     Stop recording:
-
-       # iocage record stop UUID
-
-     Create package from recorded session:
-
-       # iocage package UUID
-
-     Import package on another host:
-
-       # iocage import UUID
-
      Get the last successful start time for all jails:
 
        # iocage show last_started
 
 HINTS
-     iocage marks a ZFS pool in the pool's comment field and identifies the
-     active pool for use based on this string.
+     iocage marks a ZFS pool in a property on the pool's root-level dataset and
+     identifies the active pool for use based on this property.
 
      If using VNET don't forget to add the node's physical NIC into one
      of the bridges if you need an outside connection.  Also read bridge(4)
