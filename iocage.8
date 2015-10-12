@@ -17,7 +17,7 @@
    \fBiocage\fP \fIstatus\fP [\fB-H\fP] [uuid|tag]
    \fBiocage\fP \fIstart\fP uuid|tag
    \fBiocage\fP \fIstop\fP uuid|tag
-   \fBiocage\fP \fIrestart\fP [\fB-H\fP] uuid|tag
+   \fBiocage\fP \fIrestart\fP [\fB-H\fP] uuid|tag [uuid|tag [\.\.\.]]
    \fBiocage\fP \fIrcboot\fP
    \fBiocage\fP \fIrcshutdown\fP
    \fBiocage\fP \fIconsole\fP uuid|tag
@@ -375,11 +375,11 @@ You can also \fIreset\fP every jail at once by using the keyword "ALL".
 
 .fam T
 .fi
-\fIrestart\fP [\fB-H\fP] uuid|tag
+\fIrestart\fP [\fB-H\fP] uuid|tag [uuid|tag [\.\.\.]]
 .PP
 .nf
 .fam C
-         Restart the jail identified by uuid or tag.
+         Restart the jail(s) identified by uuid or tag.
 
          This method will by default restart the jail without destroying the
          jail's networking and the jail process itself.  All processes are
