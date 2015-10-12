@@ -662,7 +662,7 @@ __cmd_restart () {
     done
     shift $((OPTIND - 1))
 
-    for _name in "${@}"; do
+    for _name in "${@}" ; do
         __check_name "${_name}"
 
         _dataset=$(__find_jail ${_name})
@@ -783,7 +783,7 @@ __cmd_snapshot () {
 __cmd_start () {
     local _name _dataset
 
-    for  _name in "${@}"; do
+    for  _name in "${@}" ; do
         __check_name "${_name}"
 
         _dataset=$(__find_jail ${_name})
@@ -823,7 +823,7 @@ __cmd_status () {
 __cmd_stop () {
     local _name _dataset
 
-    for _name in "${@}"; do
+    for _name in "${@}" ; do
         __check_name "${_name}"
 
         _dataset=$(__find_jail ${_name})
