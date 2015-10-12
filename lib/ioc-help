@@ -15,8 +15,8 @@ SYNOPSIS
      iocage reset uuid|tag|ALL
      iocage list [-H] -r|[-btnl]
      iocage status [-H] [uuid|tag]
-     iocage start uuid|tag
-     iocage stop uuid|tag
+     iocage start uuid|tag [uuid|tag [...]]
+     iocage stop uuid|tag [uuid|tag [...]]
      iocage restart [-H] uuid|tag [uuid|tag [...]]
      iocage rcboot
      iocage rcshutdown
@@ -254,13 +254,13 @@ DESCRIPTION
          USE - used space
          AVA - available space
 
-     start uuid|tag
+     start uuid|tag [uuid|tag [...]]
 
-         Start the jail identified by uuid or tag.
+         Start the jail(s) identified by uuid or tag.
 
-     stop uuid|tag
+     stop uuid|tag [uuid|tag [...]]
 
-         Stop the jail identified by uuid or tag.
+         Stop the jail(s) identified by uuid or tag.
 
      restart [-H] uuid|tag [uuid|tag [...]]
 
