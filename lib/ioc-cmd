@@ -508,47 +508,6 @@ __cmd_fetch () {
     __fetch_release
 }
 
-__cmd_get () {
-    local _noheader _valueonly _opt _property _name _dataset _value _uuid
-
-    _noheader=0
-    _valueonly=0
-
-    while getopts ":Ho:" _opt ; do
-        case ${_opt} in
-            "H") _noheader=1 ;;
-            "o") [ "${OPTARG}" == "value" ] && _valueonly=1 ;;
-            "?") __fatal_error "Invalid get option: -${OPTARG}" ;;
-        esac
-    done
-    shift $((OPTIND - 1))
-
-    _property=${1}
-    __require_not_empty "${_property}" "Missing arguments!"
-    __require_single_word "${_property}" "Invalid property!"
-
-    _name=${2:-"ALL"}
-    __check_name_all_default "${_name}"
-
-    if [ ${_name} = "ALL" ] ; then
-        __get_all_prop ${_noheader} ${_property}
-    else
-        _dataset=$(__find_jail ${_name})
-        __check_dataset "${_dataset}" ${_name}
-        _value="$(__get_jail_prop ${_property} ${_dataset})"
-        {
-            [ ${_noheader} -eq 1 -o ${_valueonly} -eq 1 ] \
-              || printf "%s^%s^%s\n" "UUID" "PROP" "VALUE"
-            case ${_valueonly} in
-                0)  _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-                    printf "%s^%s^%s\n" "${_uuid}" "${_property}" "${_value}"
-                    ;;
-                1)  printf "%s^\n" "${_value}" ;;
-            esac
-        } | column -ts^
-    fi
-}
-
 __cmd_init_host () {
     local _remote _pool
 
