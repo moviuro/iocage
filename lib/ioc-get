@@ -1,11 +1,13 @@
 #!/bin/sh
 
 __cmd_get () {
-    local _noheader _valueonly _opt _props _property _name _datasets _dataset \
-      _value _uuid
+    local _noheader _valueonly _props_IFS _bak_IFS _opt _props _property _name \
+      _datasets _dataset _value _uuid
 
     _noheader=0
     _valueonly=0
+    _props_IFS=","  # The list of properties is comma-seperated
+    _bak_IFS="$IFS" # We backup $IFS
 
     while getopts ":Ho:" _opt ; do
         case ${_opt} in
@@ -26,6 +28,17 @@ __cmd_get () {
             done ;;
     esac
 
+    if [ "$_props" == "all" ] ; then
+        _props="${CONF_NET}
+                ${CONF_JAIL}
+                ${CONF_RCTL}
+                ${CONF_CUSTOM}
+                ${CONF_SYNC}
+                ${CONF_FTP}
+                ${CONF_ZFS}"
+        _props_IFS=" " # The list of properties is space-seperated
+    fi
+
     {
         [ ${_noheader} -eq 1 -o ${_valueonly} -eq 1 ] \
           || printf "%s^%s^%s\n" "UUID" "PROP" "VALUE"
@@ -33,13 +46,13 @@ __cmd_get () {
         # ${_datasets} is empty if we didn't get names or got "ALL"
         for _dataset in ${_datasets:-$(__find_jail_all)} ; do
 
-            IFS="," # The list of properties is comma-seperated
+            IFS="$_props_IFS"
             for _property in ${_props} ; do
 
                 __require_not_empty "${_property}" "Missing arguments!"
                 __require_single_word "${_property}" "Invalid property!"
 
-                IFS=$' \t\n' # We get an error if we don't reset IFS
+                IFS="$_bak_IFS"
                 _value="$(__get_jail_prop ${_property} ${_dataset})"
                 case ${_valueonly} in
                     0)  _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
