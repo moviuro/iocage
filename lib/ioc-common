@@ -257,12 +257,13 @@ __require_dataset_not_multiple () {
 # Require that the first argument is in the second
 #
 # ${1}: Argument to check for presence
-# ${2}: Argument to check ${1} in
+# other args: Arguments to check ${1} in
 __require_in_ssv () {
     local _word _list _found _item
 
     _word=${1}
-    _list="${2}"
+    shift
+    _list="${@}"
     _found=0
 
     for _item in ${_list} ; do
@@ -367,7 +368,7 @@ __check_prop_name () {
     __require_name_not_empty "${_property}"
     __require_name_not_default "${_property}"
     __require_name_single_word "${_property}"
-    __require_in_ssv "${_property}" "${_CONF}"
+    __require_in_ssv "${_property}" ${_CONF}
 }
 
 # Translate a property name to a ZFS property --------------------------
