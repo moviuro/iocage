@@ -66,11 +66,30 @@ __find_jail_by_name () {
     _name=${1}
 
     _uuid_regex="[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}"
+
+    # How this pipeline works:
+    # * zfs ...
+    # List the UUID and tag of every jail, sorted by tag.
+    #
+    # * egrep ...
+    # Filter using the UUID regexp to eliminate any datasets that aren't jails.
+    #
+    # * awk ...
+    # Try to match the given name as a prefix of either the UUID or the tag. If
+    # a match is found, print it. If the name is an exact match of the tag, end
+    # the search. Ending when the tag is an exact match allows tags that are a
+    # prefix of other tags to be used. Because the tags are sorted, the exact
+    # match will always be first.
     _matched=$(zfs list -Hrd1 -o ${module}:host_hostuuid,${module}:tag \
                    -s ${module}:tag \
                    ${pool}/iocage/jails \
                | egrep -w "${_uuid_regex}" \
-               | awk -v name="^${_name}" '$1 ~ name || $2 ~ name { print $1 }')
+               | awk -v name="^${_name}" \
+                     '$1 ~ name || $2 ~ name {
+                          print $1;
+                          if ($2 ~ name"$")
+                              exit;
+                      }')
     _count=$(__wc ${_matched})
 
     case ${_count} in
@@ -474,10 +493,49 @@ __findscript () {
     fi
 }
 
+# Test if a jail is running.
+#
+# Returns 0 if the jail is up, 1 if otherwise.
+#
+# ${1}: UUID of the jail in question
 __is_running () {
-    local _fulluuid
+    local _uuid
 
-    _fulluuid=${1}
+    _uuid=${1}
 
-    jls name | grep -q ioc-${_fulluuid}
+    jls name | grep -q ioc-${_uuid}
+}
+
+__status () {
+    local _dataset _uuid
+
+    _dataset=${1}
+
+    _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+
+    if __is_running ${_uuid} ; then
+        echo "up"
+    else
+        echo "down"
+    fi
+}
+
+# Show the status of all jails known to iocage.
+#
+# ${1}: suppress the header line?
+__status_all () {
+    local _noheader _uuids _uuid
+
+    _noheader=${1}
+
+    _uuids=$(zfs list -Hrd1 -o ${module}:host_hostuuid ${pool}/iocage/jails \
+             | awk 'NR > 1') # Awk for trimming the ${pool}/iocage/jails line
+
+    {
+        [ ${_noheader} -eq 0 ] && printf "%s^%s\n" "UUID" "STATUS"
+        for _uuid in ${_uuids} ; do
+            echo -n "${_uuid}^"
+            __status ${pool}/iocage/jails/${_uuid}
+        done
+    } | column -ts^
 }

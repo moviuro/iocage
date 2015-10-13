@@ -21,11 +21,23 @@ __snapremove () {
     _snapshot=${2}
 
     if [ ${_snapshot} = "ALL" ] ; then
-        _snapshots=$(zfs list -Hrd1 -t snapshot -o name ${_dataset})
+        # When removing ALL@ALL we get ${pool}/iocage/jails as the dataset and
+        # have to look one level deeper to find snapshots of the jails.
+        # We don't want to spam the user with messages from zfs about clones, so
+        # avoid them by removing snapshots with clones from the list.
+        if [ ${_dataset} = ${pool}/iocage/jails ] ; then
+            _snapshots=$(zfs list -Hrd2 -t snapshot -o name,clones ${_dataset} \
+                         | awk 'NF == 1')
+        else
+            _snapshots=$(zfs list -Hrd1 -t snapshot -o name,clones ${_dataset} \
+                         | awk 'NF == 1')
+        fi
         for _snap in ${_snapshots} ; do
             zfs destroy -r ${_snap}
         done
     else
+        # It's very tricky to do the clone check here without breaking the
+        # secret special ability to specify ranges and lists of snapshots.
         __info "Removing snapshot: @${_snapshot}"
         zfs destroy -r ${_dataset}@${_snapshot}
     fi

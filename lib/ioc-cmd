@@ -66,11 +66,6 @@ __parse_cmd () {
                 __cmd_exec "${@}"
                 exit
                 ;;
-            export)
-                __require_root
-                __cmd_export "${@}"
-                exit
-                ;;
             fetch)
                 __require_root
                 __cmd_fetch "${@}"
@@ -84,19 +79,9 @@ __parse_cmd () {
                 __help
                 exit
                 ;;
-            init-host)
-                __require_root
-                __cmd_init_host "${@}"
-                exit
-                ;;
             inuse)
                 __require_root
                 __cmd_inuse "${@}"
-                exit
-                ;;
-            import)
-                __require_root
-                __cmd_import "${@}"
                 exit
                 ;;
             limits)
@@ -106,11 +91,6 @@ __parse_cmd () {
                 ;;
             list)
                 __cmd_list "${@}"
-                exit
-                ;;
-            package)
-                __require_root
-                __cmd_package "${@}"
                 exit
                 ;;
             promote)
@@ -126,11 +106,6 @@ __parse_cmd () {
             rcshutdown)
                 __require_root
                 __cmd_rcshutdown
-                exit
-                ;;
-            record)
-                __require_root
-                __cmd_record "${@}"
                 exit
                 ;;
             reset)
@@ -179,6 +154,10 @@ __parse_cmd () {
             start)
                 __require_root
                 __cmd_start "${@}"
+                exit
+                ;;
+            status)
+                __cmd_status "${@}"
                 exit
                 ;;
             stop)
@@ -256,13 +235,14 @@ __cmd_clean () {
     _releases=0
     _jails=0
 
+    OPTIND=1
     while getopts ":farj" _opt; do
         case ${_opt} in
             "f") _force=1 ;;
             "a") _all=1 ;;
             "r") _releases=1 ;;
             "j") _jails=1 ;;
-            "?") __fatal_error "Invalid command syntax!" ;;
+            "?") __fatal_error "Invalid clean option: -${OPTARG}" ;;
         esac
     done
 
@@ -276,13 +256,13 @@ __cmd_clean () {
         esac
 
         echo
-        echo "  WARNING: This will destroy ${_destroying}"
+        echo "WARNING: This will destroy ${_destroying}"
         echo
-        echo -n "  Are you sure? y[N]: "
+        echo -n "Are you sure? y[N]: "
         read _answer
 
         if [ "${_answer}" != "Y" -a "${_answer}" != "y" ] ; then
-            echo "  Command not confirmed. No action taken."
+            echo "Command not confirmed. No action taken."
             exit 1
         fi
     fi
@@ -303,11 +283,12 @@ __cmd_clone () {
     _props=0
     _fstab=0
 
+    OPTIND=1
     while getopts ":FP" _opt ; do
         case ${_opt} in
             "P") _props=1 ;;
             "F") _fstab=1 ;;
-            "?") __fatal_error "Invalid option: -${OPTARG}" ;;
+            "?") __fatal_error "Invalid clone option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -356,14 +337,15 @@ __cmd_deactivate () {
 }
 
 __cmd_destroy () {
-    local _force _opt _name _answer _dataset _destroying _fulluuid _tag
+    local _force _opt _name _answer _dataset _destroying _fulluuid _tag _origin
 
     _force=0
 
+    OPTIND=1
     while getopts ":f" _opt ; do
         case ${_opt} in
             "f") _force=1 ;;
-            "?") __fatal_error "Invalid command syntax!" ;;
+            "?") __fatal_error "Invalid destroy option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -376,21 +358,28 @@ __cmd_destroy () {
 
     if [ ${_force} -eq 0 ] ; then
         if [ "${_name}" = "default" ] ; then
-            _destroying="user defaults!"
+            _destroying="the user defaults!"
         else
             _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
             _tag=$(__get_dataset_ioc_prop tag ${_dataset})
-            _destroying="jail ${_fulluuid} (${_tag})"
+            _destroying="${_fulluuid} (${_tag})"
         fi
         echo
-        echo "  WARNING: This will destroy the ${_destroying}"
-        echo "  Dataset: ${_dataset}"
+        echo "WARNING: This will destroy ${_destroying}"
+        echo "Dataset: ${_dataset}"
+        _origin=$(__get_dataset_zfs_prop origin ${_dataset})
+        if [ ${_origin} != "-" ] ; then
+            echo
+            echo -n "WARNING: This will also destroy the origin snapshot if no"
+            echo " other clones remain!"
+            echo "Origin: ${_origin}"
+        fi
         echo
-        echo -n "  Are you sure ? y[N]: "
+        echo -n "Are you sure ? y[N]: "
         read _answer
 
         if [ "${_answer}" != "Y" -a "${_answer}" != "y" ] ; then
-            echo "  Command not confirmed.  No action taken."
+            echo "Command not confirmed.  No action taken."
             exit 1
         fi
     fi
@@ -404,11 +393,12 @@ __cmd_df () {
     _noheader=0
     _parsable=0
 
+    OPTIND=1
     while getopts ":Hp" _opt ; do
         case ${_opt} in
             "H") _noheader=1 ;;
             "p") _parsable=1 ;;
-            "?") __fatal_error "Invalid command syntax." ;;
+            "?") __fatal_error "Invalid df option: -${OPTARG}" ;;
         esac
     done
 
@@ -424,13 +414,14 @@ __cmd_df () {
 __cmd_exec () {
     local _jexecopts _opt _name _dataset
 
-    # check for -U or -u to pass to jexec
-    OPTIND=1
     _jexecopts=""
+
+    # Check for -U or -u to pass to jexec.
+    OPTIND=1
     while getopts ":u:U:" _opt ; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}";;
-            "?")    __fatal_error "Invalid exec option: ${_opt}";;
+            "?") __fatal_error "Invalid exec option: -${OPTARG}";;
         esac
     done
     shift $((OPTIND - 1))
@@ -447,18 +438,6 @@ __cmd_exec () {
 
         __exec ${_jexecopts} ${_dataset} "${@}"
     fi
-}
-
-__cmd_export () {
-    local _name _dataset
-
-    _name=${1}
-    __check_name "${_name}"
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
-
-    __export ${_dataset}
 }
 
 __cmd_fetch () {
@@ -539,17 +518,6 @@ __cmd_inuse () {
     fi
 }
 
-__cmd_import () {
-    local _name
-
-    _name=${1}
-    __check_name "${_name}"
-
-    shift
-    __export_props "${@}"
-    __import ${_name}
-}
-
 __cmd_limits () {
     local _name _dataset
 
@@ -577,6 +545,7 @@ __cmd_list () {
     _releases=0
     _templates=0
 
+    OPTIND=1
     while getopts ":Hblnrt" _opt ; do
         case ${_opt} in
             "H") _noheader=1 ;;
@@ -585,7 +554,7 @@ __cmd_list () {
             "n") _nonioc=1 ;;
             "r") _releases=1 ;;
             "t") _templates=1 ;;
-            "?") __fatal_error "Invalid command syntax." ;;
+            "?") __fatal_error "Invalid list option: -${OPTARG}" ;;
         esac
     done
 
@@ -602,18 +571,6 @@ __cmd_list () {
             __list_non_ioc_jails ${_noheader}
         fi
     fi
-}
-
-__cmd_package () {
-    local _name _dataset
-
-    _name=${1}
-    __check_name "${_name}"
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
-
-    __package ${_dataset}
 }
 
 __cmd_promote () {
@@ -636,23 +593,6 @@ __cmd_rcshutdown () {
     __rc_jails shutdown
 }
 
-__cmd_record () {
-    local _action _name _dataset
-
-    _action=${1}
-    __require_not_empty "${_action}" "Missing arguments!"
-    [ "${_action}" == "start" -o "${_action}" == "stop" ] ||
-        __fatal_error "Invalid action! Must be one of start|stop"
-
-    _name=${2}
-    __check_name "${_name}"
-
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
-
-    __record ${_action} ${_dataset}
-}
-
 __cmd_reset () {
     local _name _force _answer _dataset
 
@@ -669,18 +609,18 @@ __cmd_reset () {
     if [ ${_name} == "ALL" ] ; then
         if [ ${_force} -eq 0 ] ; then
             echo
-            echo "  WARNING: This will reset ALL jails!"
+            echo "WARNING: This will reset ALL jails!"
             echo
-            echo -n "  Are you sure? y[N]: "
+            echo -n "Are you sure? y[N]: "
             read _answer
 
             if [ "${_answer}" != "Y" ] && [ "${_answer}" != "y" ] ; then
-                echo "  Command not confirmed.  No action taken."
+                echo "Command not confirmed.  No action taken."
                 exit 1
             fi
         fi
 
-        echo "  Resetting all jails."
+        echo "Resetting all jails."
 
         __reset_jail_props_all
     else
@@ -696,10 +636,11 @@ __cmd_restart () {
 
     _hard=0
 
+    OPTIND=1
     while getopts ":H" _opt ; do
         case ${_opt} in
             "H") _hard=1 ;;
-            "?") __fatal_error "Invalid command syntax." ;;
+            "?") __fatal_error "Invalid restart option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -788,15 +729,19 @@ __cmd_snapremove () {
     local _name _snapshot _dataset
 
     _name=${1%%@*}
-    __check_name "${_name}"
+    __check_name_all "${_name}"
 
     _snapshot=${1#${_name}}
     _snapshot=${_snapshot#@} # Remove leading @ (separate step in case no @)
     __require_not_empty "${_snapshot}" "Missing snapshot name!"
     __require_single_word "${_snapshot}" "Invalid snapshot name: ${_snapshot}"
 
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+    if [ ${_name} = "ALL" ] ; then
+        _dataset=${pool}/iocage/jails
+    else
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
+    fi
 
     __snapremove ${_dataset} ${_snapshot}
 }
@@ -827,6 +772,33 @@ __cmd_start () {
     __check_dataset "${_dataset}" ${_name}
 
     __start_jail ${_dataset}
+}
+
+__cmd_status () {
+    local _noheader OPTIND _opt _name _dataset
+
+    _noheader=0
+
+    OPTIND=1
+    while getopts ":H" _opt ; do
+        case ${_opt} in
+            "H") _noheader=1 ;;
+            "?") __fatal_error "Invalid status option: -${OPTARG}" ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    _name=${1:-"ALL"}
+    __check_name_all "${_name}"
+
+    if [ ${_name} = "ALL" ] ; then
+        __status_all ${_noheader}
+    else
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
+
+        __status ${_dataset}
+    fi
 }
 
 __cmd_stop () {

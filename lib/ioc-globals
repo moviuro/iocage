@@ -19,8 +19,6 @@ else
     vnet="off"
 fi
 
-ipv6="on" # This should be either exposed or eliminated.
-
 interfaces="vnet0:bridge0,vnet1:bridge1"
 host_hostname=${uuid}
 exec_fib=0
@@ -35,7 +33,7 @@ ip6_saddrsel=1
 ip6="new"
 defaultrouter="none"
 defaultrouter6="none"
-resolver="copy"
+resolver="none"
 mac_prefix="02ff60"
 vnet0_mac="none"
 vnet1_mac="none"
@@ -117,8 +115,7 @@ type="jail"
 release=$(echo "${supported_releases}" | head -n1)
 hostid=$(cat /etc/hostid)
 jail_zfs="off"
-jail_zfs_dataset="iocage/jails/${uuid}/root/data"
-jail_zfs_pool="DEFAULT"
+jail_zfs_dataset="DEFAULT/iocage/jails/${uuid}/data"
 mount_procfs=0
 hack88=0
 # iocage_version is set in the iocage script
@@ -242,7 +239,6 @@ CONF_CUSTOM="tag
              cpuset
              jail_zfs
              jail_zfs_dataset
-             jail_zfs_pool
              release
              hack88
              iocage_version"
@@ -299,7 +295,7 @@ __term_supports_colors () {
 
     _colors=$(tput colors 2>/dev/null)
 
-    if [ -n "${_colors}" -a "${_colors}" -gt 2 ] ; then
+    if [ -n "${_colors}" ] && [ "${_colors}" -gt 2 ] ; then
         _result=0 # true
     else
         _result=1 # false

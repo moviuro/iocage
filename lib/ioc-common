@@ -27,7 +27,7 @@ __stderr () {
 #
 # ${1}: error message to display
 __error () {
-    __stderr "  ERROR: ${1}"
+    __stderr "ERROR: ${1}"
 }
 
 # Print an error message to stderr and exit the current shell ----------
@@ -45,7 +45,7 @@ __fatal_error () {
 #
 # ${1}: message to display
 __info () {
-    __stderr "  INFO: ${1}"
+    __stderr "INFO: ${1}"
 }
 
 # Print the number of parameters passed to this function ---------------
@@ -495,34 +495,26 @@ __set_dataset_ioc_prop () {
 }
 
 __console () {
-    local _dataset _fulluuid _login_flags _jexec _exec_fib
+    local _dataset _login_flags
 
     _dataset=${1}
 
-    _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _login_flags=$(__get_dataset_ioc_prop login_flags ${_dataset})
-    _exec_fib=$(__get_dataset_ioc_prop exec_fib ${_dataset})
 
-    if [ ${_exec_fib} -ne 0 ] ; then
-        _jexec="setfib ${_exec_fib} jexec"
-    else
-        _jexec="jexec"
-    fi
-
-    ${_jexec} ioc-${_fulluuid} login ${_login_flags}
+    __exec ${_dataset} login ${_login_flags}
 }
 
 __exec () {
     local _jexecopts _opt _dataset _fulluuid _exec_fib _jexec
 
-    OPTIND=1
     _jexecopts=""
 
     # check for -U or -u to pass to jexec
+    OPTIND=1
     while getopts ":u:U:" _opt ; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}" ;;
-            "?") __fatal_error "Invalid exec option: ${OPTARG}" ;;
+            "?") __fatal_error "Invalid exec option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
@@ -545,14 +537,14 @@ __exec () {
 __exec_all () {
     local _jexecopts _opt _jails _jail
 
-    OPTIND=1
     _jexecopts=""
 
     # check for -U or -u to pass to jexec
+    OPTIND=1
     while getopts ":u:U:" _opt ; do
         case "${_opt}" in
             [uU]) _jexecopts="${_jexecopts} -${_opt} ${OPTARG}" ;;
-            "?") __fatal_error "Invalid exec option: ${OPTARG}" ;;
+            "?") __fatal_error "Invalid exec option: -${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))

@@ -17,10 +17,10 @@ __update () {
         _jail_release=$(__get_dataset_ioc_prop release ${_dataset})
         _date=$(date "+%F_%T")
 
-        __info "Creating back-out snapshot"
+        echo "Creating back-out snapshot"
         __snapshot ${_dataset} ioc-update_${_date}
 
-        __info "Updating jail"
+        echo "Updating jail"
 
         if [ $(uname -U) -lt 102000 ] ; then
             _non_interactive=""
@@ -49,8 +49,8 @@ __update () {
 
         fi
 
-        __stderr
-        __info "Once finished, don't forget to remove the snapshot!"
+        echo
+        echo "Once finished, don't forget to remove the snapshot!"
     fi
 }
 
@@ -58,8 +58,8 @@ __upgrade () {
     local _dataset _jail_type _fulluuid _mountpoint _date _oldrelease
 
     if [ ! -d ${iocroot}/download/${release} ] ; then
-        __error           "Release not found: ${release}"
-        __stderr "         Please run iocage fetch first."
+        __stderr "ERROR: Release not found: ${release}"
+        __stderr "       Please run iocage fetch first."
         exit 1
     fi
 
@@ -78,14 +78,14 @@ __upgrade () {
                   -s ${iocroot}/base/${release}/root/usr/src
         __chroot ${_dataset} newaliases
         if [ ${?} -eq 0 ] ; then
-            __stderr
-            __stderr "  Upgrade successful. Please restart jail and inspect."
-            __stderr "  Remove ${_mountpoint}/root/etc.old if everything is OK."
+            echo
+            echo "Upgrade successful. Please restart jail and inspect."
+            echo "Remove ${_mountpoint}/root/etc.old if everything is OK."
             exit 0
         else
             __stderr
             __error "Etcupdate failed! Backing out."
-            __set__dataset_ioc_prop release="${_oldrelease}" ${_dataset}
+            __set_dataset_ioc_prop release="${_oldrelease}" ${_dataset}
             rm -rf ${_mountpoint}/root/etc
             mv ${_mountpoint}/root/etc.old ${_mountpoint}/root/etc
             exit 1
@@ -95,10 +95,10 @@ __upgrade () {
     _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
     _date=$(date "+%F_%T")
 
-    __info "Creating back-out snapshot"
+    echo "Creating back-out snapshot"
     __snapshot ${_dataset} ioc-upgrade_${_date}
 
-    __info "Upgrading jail"
+    echo "Upgrading jail"
 
     env UNAME_r=${_oldrelease} env PAGER="/bin/cat" \
         /usr/sbin/freebsd-update \
@@ -120,6 +120,6 @@ __upgrade () {
     # Set jail's zfs property to new release
     __set_dataset_ioc_prop release="${release}" ${_dataset}
 
-    __stderr
-    __info "Once finished don't forget to remove the snapshot!"
+    echo
+    echo "Once finished don't forget to remove the snapshot!"
 }

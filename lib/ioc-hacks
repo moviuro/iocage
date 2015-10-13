@@ -66,8 +66,8 @@ __recursive_mount () {
 
     # If you don't like what order things are being mounted here, you should
     # probably just use legacy mountpoints.
-    zfs list -Hro name,mountpoint ${_dataset} \
-        | awk '$2 !~ /^(none|legacy)$/ { print $1 }' \
+    zfs list -Hro name,jailed,mountpoint ${_dataset} \
+        | awk  '$2 == "off" && $3 !~ /^(none|legacy)$/ { print $1 }' \
         | xargs -L 1 zfs mount
 }
 

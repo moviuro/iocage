@@ -237,7 +237,6 @@ __reset_jail_props () {
     type=$(__get_dataset_ioc_prop type ${_dataset})
     tag=$(__get_dataset_ioc_prop tag ${_dataset})
     jail_zfs_dataset=$(__get_dataset_ioc_prop jail_zfs_dataset ${_dataset})
-    jail_zfs_pool=$(__get_dataset_ioc_prop jail_zfs_pool ${_dataset})
 
     # Overriding user .defaults
     iocset_vnet0_mac=$(__get_dataset_ioc_prop vnet0_mac ${_dataset})

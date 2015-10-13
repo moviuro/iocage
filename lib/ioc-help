@@ -9,12 +9,12 @@ SYNOPSIS
      iocage activate [zpool]
      iocage fetch [release=rel] [ftpproto=proto] [ftphost=host]
             [ftpdir=path] [ftpfiles=list]
-     iocage init-host host zpool
      iocage create [-b|-c|-e] [property=value]...
      iocage clone [-FP] uuid|tag[@snapshot] [property=value]...
      iocage destroy [-f] uuid|tag|ALL
      iocage reset uuid|tag|ALL
      iocage list [-H] -r|[-btnl]
+     iocage status [-H] [uuid|tag]
      iocage start uuid|tag
      iocage stop uuid|tag
      iocage restart [-H] uuid|tag
@@ -39,10 +39,6 @@ SYNOPSIS
      iocage runtime uuid|tag
      iocage update uuid|tag
      iocage upgrade uuid|tag [release=rel]
-     iocage record start|stop uuid|tag
-     iocage package uuid|tag
-     iocage export uuid|tag
-     iocage import uuid [property=value]...
      iocage defaults
      iocage version|--version
      iocage help
@@ -136,12 +132,6 @@ DESCRIPTION
          Newly created jails or basejails will automatically have the latest
          updates applied.
 
-     init-host host zpool
-
-         Initialize a remote host for iocage.  iocage will send all required ZFS
-         filesystems over the network to the host.  This requires SSH working
-         keys installed for root.
-
      create [-b|-c|-e] [property=value]...
 
          Default behavior is to create a fully independent jail set by
@@ -163,9 +153,9 @@ DESCRIPTION
          Examples:
 
          Create a standard jail with the tag "www01" and install the packages
-         listed in a file:
+         listed in a file, using the resolv.conf of the host:
 
-           # iocage create tag=www01 pkglist=$HOME/my-pkgs.txt
+           # iocage create tag=www01 pkglist=$HOME/my-pkgs.txt resolver="copy"
 
          Create a "basejail" type jail with the tag "mybasejail":
 
@@ -216,8 +206,8 @@ DESCRIPTION
 
          The following properties retain their value when a jail is reset:
 
-           uuid, tag, type, jail_zfs_dataset, jail_zfs_pool, vnet*_mac, release,
-           hack88, resolver, ip4_autostart, ip4_autoend
+           uuid, tag, type, jail_zfs_dataset, vnet*_mac, release, hack88,
+           resolver, ip4_autostart, ip4_autoend
 
          You can also reset every jail at once by using the keyword "ALL".
 
@@ -240,6 +230,15 @@ DESCRIPTION
                  iocage jail list.
 
          Combining the -t and -b flags shows only templates that are basejails.
+
+     status [-H] [uuid|tag]
+
+         Show the whether a jail is "up" or "down".  If no jail is specified,
+         the status of all jails is output.
+
+         -H      Suppress header.  When no jail is specified, a header is
+                 normally show unless this option is used.  No-op when a jail is
+                 specified.
 
      df [-p]
 
@@ -315,10 +314,11 @@ DESCRIPTION
 
            # iocage show last_started
 
-     get property[,property[,...]]|all uuid|tag
+     get property[,property[,...]]|all [uuid|tag|ALL]
 
-         Get named property or if "all" keyword is specified dump all properties
-         known to iocage in a zfs(8)-like form.
+         Get the named property or if "all" keyword is specified dump all
+         properties known to iocage.  If no jail is specified or the keyword
+         "ALL" is given as the jail, the property is listed for all jails.
 
          -H     Suppress headers
 
@@ -414,31 +414,6 @@ DESCRIPTION
          re-clone its filesystems from the new release either by issuing the
          upgrade command or at next jail start.
 
-     record start|stop uuid|tag
-
-         The record function will record every changed file in a directory
-         called /iocage/jails/UUID/recorded.  This is achieved by using a
-         unionfs overlay mount.  Used for differential package creation.
-
-     package uuid|tag
-
-         Package recorded jail session into /iocage/packages.  Creates SHA256
-         checksum and prunes empty directories, files and some residual files
-         like utx.* and .history.  Before packaging any jails, make sure no
-         unwanted files contaminated or leaked into the recorded package.
-
-     export uuid|tag
-
-         Export a complete jail.  An archive file is created in /iocage/images
-         with SHA256 checksum.  Jail must be in stopped state before exporting.
-
-     import uuid [property=value]...
-
-         Import full jail images or differential packages.  Images need to be
-         present in /iocage/images and packages in /iocage/packages along with
-         checksum files.  You can use short UUIDs, but do not specify the full
-         filename; only give the UUID.
-
      defaults
 
          Display all defaults set in iocage itself.
@@ -461,6 +436,10 @@ PROPERTIES
          installed when a jail is created.  Works only in combination with the
          create subcommand.
 
+         Note: A working resolver is required for this feature. The default
+         resolver setting creates the jail without a resolver configured. Set
+         resolver in the user defaults or on the command line for this to work.
+
          Default: none
          Source: local
 
@@ -472,13 +451,9 @@ PROPERTIES
          Default: auto-guess
          Source: local
 
-     ip4_addr="interface|ip-address/netmask"
+     ip4_addr="interface|ip-address/netmask param ..."
 
          The IPv4 address for VNET and shared IP jails.
-
-         Form is: interface|ip-address/netmask
-         Multiple interfaces:
-         "interface|ip-address/netmask,interface|ip-address/netmask"
 
          For shared IP jails if an interface is given before the IP address, an
          alias for the address will be added to that interface, as it is with
@@ -488,6 +463,11 @@ PROPERTIES
 
          If a netmask in either dotted-quad or CIDR form is given after IP
          address, it will be used when adding the IP alias.
+
+         Additional parameters for ifconfig(8) may optionally be supplied
+         following the address.
+
+         Multiple addresses are configured by using a comma separated list.
 
          If the AUTOIP4 tag is used in place of an ip-address, the IP address
          will be automatically assigned at first start of the jail.  This
@@ -546,23 +526,41 @@ PROPERTIES
          Setting this property to anything other than none will try to
          configure a default route inside a VNET jail.
 
+         Default: none
+         Source: route(8)
+
      defaultrouter6=none | ip6address
          Setting this property to anything other than none will try to
          configure a default IPv6 route inside a VNET jail.
 
-     resolver=copy | none | nameserver IP;nameserver IP;search domain.local
-         Sets the jail's resolver (resolv.conf).  Fields must be ; delimited
-         which are translated to newlines in resolv.conf.
+         Default: none
+         Source: route(8)
 
-         If the resolver is set to "copy" (default), the jail will inherit the
-         host's resolv.conf file.
+     resolver=none | copy | nameserver IP;nameserver IP;search domain.local
+         Sets the jail's resolver (resolv.conf).
 
-         If the resolver is set to "none", the jail's resolv.conf will not be
-         touched by iocage.
+         If the resolver is set to "none", (default) the jail's resolv.conf will
+         not be touched by iocage.  A resolv.conf file must be manually created
+         in the jail and managed by the administrator.
 
-     ip6.addr, ip6.saddrsel, ip6
-         A set of IPv6 options for the prison, the counterparts to ip4.addr,
-         ip4.saddrsel and ip4 above.
+         If the resolver is set to "copy", the jail will inherit the host's
+         resolv.conf file.  When the jail starts, /etc/resolv.conf is copied
+         into the jail from the host, replacing the file in the jail if it
+         already exists.
+
+         If the resolver is set to something other than "none" or "copy" then
+         the string is transformed into a resolv.conf file for the jail at start
+         time, replacing the file in the jail if it already exists.  Fields must
+         be ; delimited, which are translated to newlines in the resulting file.
+
+         Default: none
+         Source: resolver(5)
+
+     ip6_addr, ip6_saddrsel, ip6
+         A set of IPv6 options for the prison, the counterparts to ip4_addr,
+         ip4_saddrsel and ip4 above.
+
+         Source: jail(8)
 
      interfaces=vnet0:bridge0,vnet1:bridge1 | vnet0:bridge0
          By default there are two interfaces specified with their bridge
@@ -595,7 +593,7 @@ PROPERTIES
          to a value lower than 2.  Devfs rules and rulesets cannot be viewed or
          modified from inside a jail.
 
-         NOTE: It is important that only appropriate device nodes in devfs be
+         Note: It is important that only appropriate device nodes in devfs be
          exposed to a jail; access to disk devices in the jail may permit
          processes in the jail to bypass the jail sandboxing by modifying files
          outside of the jail.  See devfs(8) for information on how to use devfs
@@ -727,7 +725,8 @@ PROPERTIES
          operate only on a mount-point where the jail's chroot directory is
          located.
 
-         Default: 2. jail(8)
+         Default: 2
+         Source: jail(8)
 
      children_max=0 | ...
          The number of child jails allowed to be created by this jail (or by
@@ -748,28 +747,22 @@ PROPERTIES
      jail_zfs=on | off
          Enables automatic ZFS jailing inside the jail.  Assigned ZFS dataset
          will be fully controlled by the jail.
-         NOTE: Setting this to "on" automatically enables allow_mount=1
+         Note: Setting this to "on" automatically enables allow_mount=1
          enforce_statfs=1 and allow_mount_zfs=1! These are dependent options
          required for ZFS management inside a jail.
 
          Default: off
          Source: local
 
-     jail_zfs_dataset=iocage/jails/UUID/root/data | zfs_filesystem
+     jail_zfs_dataset=DEFAULT/iocage/jails/UUID/data | zfs_filesystem
          This is the dataset to be jailed and fully handed over to a jail.
-         Takes the ZFS filesystem name without pool name.
-         NOTE: only valid if jail_zfs=on.  By default the mountpoint is set to
+         Takes the full ZFS filesystem name including the pool name. "DEFAULT"
+         may be used as a keyword to represent the default pool iocage uses.
+         Note: only valid if jail_zfs=on.  By default the mountpoint is set to
          none, to mount this dataset set its mountpoint inside the jail i.e.
          "zfs set mountpoint=/data full-dataset-name" and issue "mount -a".
 
-         Default: iocage/jails/UUID/root/data
-         Source: local
-
-     jail_zfs_pool=DEFAULT | zpool
-         This is the pool for jail_zfs_dataset. The keyword DEFAULT uses the
-         currently active pool, the same one the jails are stored on.
-
-         Default: DEFAULT
+         Default: DEFAULT/iocage/jails/UUID/data
          Source: local
 
      securelevel=3 | 2 | 1 | 0 | -1
@@ -1305,29 +1298,13 @@ EXAMPLES
 
        # iocage clone UUID-of-template tag=myjail
 
-     Record all changing files in a jail:
-
-       # iocage record start UUID
-
-     Stop recording:
-
-       # iocage record stop UUID
-
-     Create package from recorded session:
-
-       # iocage package UUID
-
-     Import package on another host:
-
-       # iocage import UUID
-
      Get the last successful start time for all jails:
 
        # iocage show last_started
 
 HINTS
-     iocage marks a ZFS pool in the pool's comment field and identifies the
-     active pool for use based on this string.
+     iocage marks a ZFS pool in a property on the pool's root-level dataset and
+     identifies the active pool for use based on this property.
 
      If using VNET don't forget to add the node's physical NIC into one
      of the bridges if you need an outside connection.  Also read bridge(4)

@@ -8,23 +8,33 @@ of the best features and technologies the FreeBSD operating system has to offer.
 It is geared for ease of use with a simple and easy to understand command
 syntax.
 
-This fork is focused on code quality and correctness. A major cleanup of the
+This is an experimental fork of iocage, for the purpose of rapidly exploring new
+features and ideas. It is a sandbox for coming up with creative solutions to
+problems and for testing changes. This is not a drop in replacement for upstream
+iocage, it is not intended to be used in any production environment, there is no
+goal of overtaking the upstream project. The objective is to write clean code
+and implement features that are necessary for use cases the original authors
+have expressed no desire to support.
+
+This fork focuses on code quality and correctness. A major cleanup of the
 upstream code base was performed to make iocage more pleasant to work on. By
 enforcing more consistent style and naming conventions, making functions more
 concise and easier to reason about, and introducing a separation between user
 interfaces and the implementation of functionality, this fork makes new features
 easier to introduce.
 
-Users should be aware that this repository is at times experimental. Testing and
-bug reports are very welcome. The documentation is unfortunately difficult to
-maintain. Currently the `iocage help` documentation is the most accurate.
+Users should be aware that this repository may at times be broken. This is a
+development tree that potentially introduces breaking changes, and the code in
+this tree should not be considered release quality or suitable for production
+use at this time. Testing and bug reports are very welcome.
 
 The jail formats of this fork and upstream iocage are basically compatible, but
 the command line interfaces are diverging. The goals of enhancing our jail
 format and command line interface mean that upstream compatibility takes a lower
 priority.
 
-- **IRC**: For general iocage discussion, [Freenode #iocage](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23iocage)
+- **IRC**: For general discussion and brainstorming on experimental
+           feature ideas, feel free to join [Freenode #freqlabs](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23freqlabs).
 
 **CURRENT GOALS**
 - Enhance iocage with more zfs-like functionality, syntax
@@ -34,10 +44,9 @@ priority.
 - Avoid wasteful overhead, use of global state
 - Track useful features from upstream
 
-**FUTURE IDEAS**
+**FUTURE GOALS**
 - Extend the basejail concept to allow for specifying a custom base
 - Hierarchical jails, layering/inheritance
-- Consolidate redundant documentation files
 - Test suite for proving correctness
 
 **NON-GOALS**
@@ -65,13 +74,14 @@ priority.
   the priority of the jail
 - Improved error messages
 - Getopts option parsing for more flexible and familiar operation
-- Versioned jail format for keeping jail properties compatible with iocage
+- Versioned jail format for keeping track of changes between iocage versions
 - Prefix matching for tags in addition to UUIDs
 - A user property is used for pool activation rather than hijacking the comment
 - An alternate pool may be specified for jail_zfs_dataset with the jail_zfs_pool
   property
 - The fstab for jails offers `%jailroot%` as a placeholder for the root path of
   a jail
+- Option to not replace rc.conf every start (resolver=none, resolver=copy)
 - Helpful comments in the code
 - Various bug fixes
 - And more! :)
@@ -103,8 +113,6 @@ Start the jail:
         options         RCTL   # same as above
 
 **OTHER CONSIDERATIONS**
-- Documentation needs work, currently `iocage help`is the most maintained
-  reference
 - For resource limiting please read rctl(8)
 - For the explanations on jail properties read jail(8)
 - Create bridge0 and bridge1 interfaces

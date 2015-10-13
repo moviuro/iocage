@@ -3,7 +3,7 @@
 __start_jail () {
     local _dataset _fulluuid _id _status _template _nics _i _nic _bridge \
           _jail_hostid _tag _jail_type _mountpoint _procfs _jzfs _jzfs_pool \
-          _jzfs_dataset _vnet _cpuset
+          _jzfs_dataset _vnet _cpuset _exec_start
 
     _dataset=${1}
 
@@ -34,7 +34,7 @@ __start_jail () {
 
     _tag=$(__get_dataset_ioc_prop tag ${_dataset})
 
-    echo "${_id} Starting (tag: \"${_tag}\")"
+    echo "${_id} Starting (${_tag})"
 
     _jail_type=$(__get_dataset_ioc_prop type ${_dataset})
     if [ "${_jail_type}" = "basejail" ] ; then
@@ -57,19 +57,12 @@ __start_jail () {
 
     _jzfs=$(__get_dataset_ioc_prop jail_zfs ${_dataset})
     if [ "${_jzfs}" = "on" ] ; then
-        _jzfs_dataset=$(__get_dataset_ioc_prop jail_zfs_dataset ${_dataset})
-        _jzfs_pool=$(__get_dataset_ioc_prop jail_zfs_pool ${_dataset})
-        if [ $(__wc ${_jzfs_pool}) -ne 1 ] ; then
-            __stderr "${_id} Invalid jail_zfs_pool: ${_jzfs_pool}"
-            return 1
-        fi
-        if [ "${_jzfs_pool}" = "DEFAULT" ] ; then
-            _jzfs_pool=${pool}
-        fi
+        _jzfs_dataset=$(__get_dataset_ioc_prop jail_zfs_dataset ${_dataset} \
+                        | sed -e "s|^DEFAULT|${pool}|")
         __set_dataset_ioc_prop allow_mount=1 ${_dataset}
         __set_dataset_ioc_prop enforce_statfs=1 ${_dataset}
         __set_dataset_ioc_prop allow_mount_zfs=1 ${_dataset}
-        __set_dataset_zfs_prop jailed=on ${_jzfs_pool}/${_jzfs_dataset}
+        __set_dataset_zfs_prop jailed=on ${_jzfs_dataset}
     fi
 
     echo -e "${_id} Filesystems preparation ${OK}"
@@ -131,7 +124,8 @@ __start_jail () {
 
     __resolv_conf ${_dataset}
 
-    jexec ioc-${_fulluuid} $(__get_dataset_ioc_prop exec_start ${_dataset}) \
+    _exec_start=$(__get_dataset_ioc_prop exec_start ${_dataset})
+    __exec ${_dataset} ${_exec_start} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     if [ ${?} -eq 0 ] ; then
         echo -e "${_id} Starting services ${OK}"
@@ -193,6 +187,7 @@ __vnet_start () {
          allow.quotas="$(__get_dataset_ioc_prop allow_quotas ${_dataset})" \
          allow.socket_af="$(__get_dataset_ioc_prop allow_socket_af \
                                                    ${_dataset})" \
+         exec.fib="$(__get_dataset_ioc_prop exec_fib ${_dataset})" \
          exec.prestart="$(__findscript ${_dataset} prestart)" \
          exec.poststart="$(__findscript ${_dataset} poststart)" \
          exec.prestop="$(__findscript ${_dataset} prestop)" \
@@ -212,7 +207,7 @@ __vnet_start () {
 __legacy_start () {
     local _dataset _uuid _mountpoint _ip4_addr_prop _ip6_addr_prop \
           _autoip4 _default_iface _ip4_addr _ip6_addr _ip4 _ip6 \
-          _ip4_addr_propline _ip6_addr_propline _fdescfs _tmpfs _ip6_addrsel
+          _fdescfs _tmpfs
 
     _dataset=${1}
 
@@ -221,24 +216,22 @@ __legacy_start () {
     _ip4_addr_prop=$(__get_dataset_ioc_prop ip4_addr ${_dataset})
     _ip6_addr_prop=$(__get_dataset_ioc_prop ip6_addr ${_dataset})
 
-    # Replace DEFAULT with the actual default interface name if needed
+    # Replace DEFAULT with the actual default interface name if needed,
+    # and convert ', ' to ',' because jail(8) is a little picky.
     _default_iface=$(netstat -f inet -nrW | awk '/^default/ { print $6 }')
-    _ip4_addr=$(__sub_default_iface ${_default_iface} "${_ip4_addr_prop}")
-    _ip6_addr=$(__sub_default_iface ${_default_iface} "${_ip6_addr_prop}")
+    _ip4_addr=$(__sub_default_iface ${_default_iface} "${_ip4_addr_prop}" \
+                | sed -e 's/, /,/g')
+    _ip6_addr=$(__sub_default_iface ${_default_iface} "${_ip6_addr_prop}" \
+                | sed -e 's/, /,/g')
 
     _ip4=$(__get_dataset_ioc_prop ip4 ${_dataset})
 
     # This is mostly a temporary workaround for
     # https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=196474
     if [ "${_ip4}" = "inherit" ] ; then
-        _ip4="inherit"
         _ip6="inherit"
-        _ip4_addr_propline=""
-        _ip6_addr_propline=""
     else
         _ip6=$(__get_dataset_ioc_prop ip6 ${_dataset})
-        _ip4_addr_propline="ip4.addr=${_ip4_addr}"
-        _ip6_addr_propline="ip6.addr=${_ip6_addr}"
     fi
 
     if [ "$(uname -U)" = "903000" ];
@@ -252,20 +245,13 @@ __legacy_start () {
                                                            ${_dataset})"
     fi
 
-    if [ "${ipv6}" = "on" ] ; then
-        _ip6_addrsel=$(__get_dataset_ioc_prop ip6_saddrsel ${_dataset})
-        _ip6_props="${_ip6_addr_propline} \
-                    ip6.saddrsel=${_ip6_addrsel} \
-                    ip6=${_ip6}"
-    else
-        _ip6_props=""
-    fi
-
     jail -c \
-         ${_ip4_addr_propline} \
+         ${_ip4_addr:+ip4.addr="${_ip4_addr}"} \
          ip4.saddrsel="$(__get_dataset_ioc_prop ip4_saddrsel ${_dataset})" \
          ip4="${_ip4}" \
-         ${_ip6_props} \
+         ${_ip6_addr:+ip6.addr="${_ip6_addr}"} \
+         ip6.saddrsel="$(__get_dataset_ioc_prop ip6_saddrsel ${_dataset})" \
+         ip6="${_ip6}" \
          name="ioc-${_uuid}" \
          host.hostname="$(__get_dataset_ioc_prop host_hostname ${_dataset})" \
          path="${_mountpoint}/root" \
@@ -293,6 +279,7 @@ __legacy_start () {
          allow.quotas="$(__get_dataset_ioc_prop allow_quotas ${_dataset})" \
          allow.socket_af="$(__get_dataset_ioc_prop allow_socket_af \
                                                    ${_dataset})" \
+         exec.fib="$(__get_dataset_ioc_prop exec_fib ${_dataset})" \
          exec.prestart="$(__findscript ${_dataset} prestart)" \
          exec.poststart="$(__findscript ${_dataset} poststart)" \
          exec.prestop="$(__findscript ${_dataset} prestop)" \
@@ -337,8 +324,7 @@ __stop_jail () {
     fi
 
     _exec_stop=$(__get_dataset_ioc_prop exec_stop ${_dataset})
-
-    jexec ioc-${_fulluuid} ${_exec_stop} \
+    __exec ${_dataset} ${_exec_stop} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     if [ ${?} -eq 0 ] ; then
         echo -e "${_id} Stopping services ${OK}"
@@ -426,7 +412,7 @@ __soft_restart_jail () {
 
     echo "${_id} Soft restarting (tag: \"${_tag}\")"
 
-    jexec ioc-${_fulluuid} ${_exec_stop} \
+    __exec ${_dataset} ${_exec_stop} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     [ ${?} -eq 0 ] ||
         __fatal_error "Soft restart failed."
@@ -436,7 +422,7 @@ __soft_restart_jail () {
     _date=$(date "+%F_%T")
 
     pkill -j ${_jid}
-    jexec ioc-${_fulluuid} ${_exec_start} \
+    __exec ${_dataset} ${_exec_start} \
         >> ${iocroot}/log/${_fulluuid}-console.log 2>&1
     __set_dataset_ioc_prop last_started=${_date} ${_dataset}
 }
