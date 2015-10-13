@@ -24,7 +24,7 @@
 \fBiocage\fP \fIchroot\fP UUID|TAG [\fIcommand\fP]
 \fBiocage\fP \fIdf\fP
 \fBiocage\fP \fIshow\fP \fIproperty\fP
-\fBiocage\fP \fIget\fP \fIproperty\fP|all UUID|TAG
+\fBiocage\fP \fIget\fP [\fB-H\fP] \fIproperty\fP[,\fIproperty\fP[,\.\.]]|all [UUID|TAG|ALL]
 \fBiocage\fP \fIset\fP \fIproperty=value\fP UUID|TAG
 \fBiocage\fP \fIcap\fP UUID|TAG
 \fBiocage\fP \fIlimits\fP [UUID|TAG]
@@ -340,16 +340,27 @@ latest updates applied.
 
 .fam T
 .fi
-\fIget\fP \fIproperty\fP|all \fIUUID\fP|TAG
+\fIget\fP [\fB-H\fP] \fIproperty\fP[,\fIproperty\fP[,\.\.]]|all [UUID|TAG|ALL]
 .PP
 .nf
 .fam C
     Get named property or if "all" keyword is specified dump all properties
-    known to iocage.
+    known to iocage in a zfs(8)-like form.
+
+    -H     Suppress headers
 
     To display whether resource limits are enforced for a jail:
 
-    iocage get rlimits UUID|TAG
+        iocage get rlimits UUID|TAG
+
+    To display all attributed IPv4 addresses:
+
+        iocage get ip4_addr ALL
+        iocage get ip4_addr
+
+    To display all information about a jail:
+
+        iocage get all UUID|TAG
 
 .fam T
 .fi
