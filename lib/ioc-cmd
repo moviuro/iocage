@@ -688,10 +688,11 @@ __cmd_runtime () {
 }
 
 __cmd_set () {
-    local _property _name _dataset
+    local _bak_IFS _properties _name _dataset _property
 
-    _property=${1}
-    __require_not_empty "${_property}" "Missing arguments!"
+    _bak_IFS="$IFS"
+    _properties="${1}"
+    __require_not_empty "${_properties}" "Missing arguments!"
 
     _name=${2}
     __check_name_default "${_name}"
@@ -700,7 +701,12 @@ __cmd_set () {
     __check_dataset "${_dataset}" ${_name}
 
     __export_props "${@}"
-    __set_jail_prop "${_property}" ${_dataset}
+
+    IFS=","
+    for _property in ${_properties} ; do
+        IFS="${_bak_IFS}"
+        __set_jail_prop "${_property}" ${_dataset}
+    done
 }
 
 __cmd_show () {
