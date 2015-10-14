@@ -254,11 +254,11 @@ __require_dataset_not_multiple () {
     [ "${_dataset}" != "multiple" ] || __fatal_error "${_description}"
 }
 
-# Require that the first argument is in the second
+# Is an item in a space-seperated list?
 #
 # ${1}: Argument to check for presence
 # other args: Arguments to check ${1} in
-__require_in_ssv () {
+__is_in_ssv () {
     local _word _list _found _item
 
     _word=${1}
@@ -273,7 +273,15 @@ __require_in_ssv () {
         fi
     done
 
-    [ ${_found} -eq 1 ] || __fatal_error "Not found: ${_word}"
+    [ ${_found} -eq 1 ]
+}
+
+# Require that the first argument is in the second
+#
+# ${1}: Argument to check for presence
+# other args: Arguments to check ${1} in
+__require_in_ssv () {
+    __is_in_ssv "${@}" || __fatal_error "Not found: ${_word}"
 }
 
 # Check the validity of the given UUID or tag --------------------------
