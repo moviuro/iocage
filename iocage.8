@@ -461,23 +461,24 @@ You can also \fIreset\fP every jail at once by using the keyword "ALL".
 .PP
 .nf
 .fam C
-    Get named property or if "all" keyword is specified dump all properties
-    known to iocage in a zfs(8)-like form.
+        Get named property or if "all" keyword is specified dump all properties
+        known to iocage in a zfs(8)-like form.
+        If no jail uuid or tag is specified, dump the property for all jails.
 
-    -H     Suppress headers
+        -H     Suppress headers
 
-    To display whether resource limits are enforced for a jail:
+        To display whether resource limits are enforced for a jail:
 
-        # iocage get rlimits UUID|TAG
+           # iocage get rlimits UUID|TAG
 
-    To display all attributed IPv4 addresses:
+        To display all attributed IPv4 addresses:
 
-        # iocage get ip4_addr ALL
-        # iocage get ip4_addr
+           # iocage get ip4_addr ALL
+           # iocage get ip4_addr
 
-    To display all information about a jail:
+        To display all information about a jail:
 
-        # iocage get all UUID|TAG
+           # iocage get all UUID|TAG
 
 .fam T
 .fi
