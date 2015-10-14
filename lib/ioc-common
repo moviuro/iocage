@@ -396,22 +396,18 @@ __get_zfs_prop () {
 
     __check_prop_name ${_property}
 
-    for _prop in ${_CONF} ; do
-        if [ ${_prop} == ${_property} ] ; then
-            _found=1
-            echo ${module}:${_property}
-            return
-        fi
-    done
+    if __is_in_ssv "${_property}" ${_CONF} ; then
+        _found=1
+        echo ${module}:${_property}
+        return
+    fi
 
     if [ ${_found} -eq 0 ] ; then
-        for _prop in ${CONF_ZFS} ; do
-            if [ ${_prop} == ${_property} ] ; then
-                _found=1
-                echo ${_property}
-                return
-            fi
-        done
+        if __is_in_ssv "${_property}" ${CONF_ZFS} ; then
+            _found=1
+            echo ${_property}
+            return
+        fi
     fi
 }
 
@@ -461,24 +457,18 @@ __set_jail_prop () {
            ${CONF_SYNC}
            ${CONF_FTP}"
 
-    for _prop in ${_CONF} ; do
-        if [ ${_prop} == ${_pname} ] ; then
-            __set_dataset_ioc_prop ${_prop}="${_pval}" ${_dataset}
-            return
-        fi
-    done
+    if __is_in_ssv "${_pname}" ${_CONF} ; then
+        __set_dataset_ioc_prop ${_prop}="${_pval}" ${_dataset}
+    fi
 
-    for _prop in ${CONF_ZFS} ; do
-        if [ ${_prop} == ${_pname} ] ; then
-            # We have a few properties that should be read-only through iocage.
-            eval _default=\$${_pname}
-            [ "${_default}" != "readonly" ] ||
-                __fatal_error "This property is read-only."
+    if __is_in_ssv "${_pname}" ${CONF_ZFS} ; then
+        # We have a few properties that should be read-only through iocage.
+        eval _default=\$${_pname}
+        [ "${_default}" != "readonly" ] ||
+            __fatal_error "This property is read-only."
 
-            __set_dataset_zfs_prop ${_prop}="${_pval}" ${_dataset}
-            return
-        fi
-    done
+        __set_dataset_zfs_prop ${_prop}="${_pval}" ${_dataset}
+    fi
 
     __fatal_error "Unsupported property: ${_pname}!"
 }
