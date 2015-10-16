@@ -25,8 +25,8 @@ SYNOPSIS
      iocage chroot uuid|tag [command [arg]...]
      iocage df [-p]
      iocage show property
-     iocage get [-H] property[,property[,...]]|all uuid|tag|ALL
-     iocage set property=value uuid|tag
+     iocage get [-H] property[,property[,...]]|all uuid|tag|ALL [uuid|tag [...]]
+     iocage set property=value[,property=value[,...]] uuid|tag [uuid|tag [...]]
      iocage cap uuid|tag
      iocage limits [uuid|tag]
      iocage uncap uuid|tag
@@ -314,7 +314,7 @@ DESCRIPTION
 
            # iocage show last_started
 
-     get property[,property[,...]]|all [uuid|tag|ALL]
+     get property[,property[,...]]|all [uuid|tag|ALL] [uuid|tag [...]]
 
          Get the named property or if "all" keyword is specified dump all
          properties known to iocage.  If no jail is specified or the keyword
@@ -322,20 +322,22 @@ DESCRIPTION
 
          -H     Suppress headers
 
-         To display whether resource limits are enforced for a jail:
+         Examples:
+
+           To display whether resource limits are enforced for a jail:
 
            # iocage get rlimits UUID|TAG
 
-         To display all attributed IPv4 addresses:
+           To display all attributed IPv4 addresses:
 
            # iocage get ip4_addr ALL
            # iocage get ip4_addr
 
-         To display all information about a jail:
+           To display all information about a jail:
 
            # iocage get all UUID|TAG
 
-     set property=value uuid|tag
+     set property=value[,property=value[,...]] uuid|tag [uuid|tag [...]]
 
          Set a property to value.
 
