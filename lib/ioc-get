@@ -40,8 +40,8 @@ __cmd_get () {
     fi
 
     {
-        [ ${_noheader} -eq 1 -o ${_valueonly} -eq 1 ] \
-          || printf "%s^%s^%s\n" "UUID" "PROP" "VALUE"
+        [ ${_noheader} -eq 1 -o ${_valueonly} -eq 1 ] ||
+            printf "%s^%s^%s\n" "UUID" "PROP" "VALUE"
 
         # ${_datasets} is empty if we didn't get names or got "ALL"
         for _dataset in ${_datasets:-$(__find_jail_all)} ; do
