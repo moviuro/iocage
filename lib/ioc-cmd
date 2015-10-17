@@ -346,41 +346,42 @@ __cmd_destroy () {
     done
     shift $((OPTIND - 1))
 
-    _name=${1}
-    __check_name_default "${_name}"
+    for _name in "${@}" ; do
+        __check_name_default "${_name}"
 
-    _dataset=$(__find_jail ${_name})
-    __check_dataset "${_dataset}" ${_name}
+        _dataset=$(__find_jail ${_name})
+        __check_dataset "${_dataset}" ${_name}
 
-    if [ ${_force} -eq 0 ] ; then
-        if [ "${_name}" = "default" ] ; then
-            _destroying="the user defaults!"
-        else
-            _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
-            _tag=$(__get_dataset_ioc_prop tag ${_dataset})
-            _destroying="${_fulluuid} (${_tag})"
-        fi
-        echo
-        echo "WARNING: This will destroy ${_destroying}"
-        echo "Dataset: ${_dataset}"
-        _origin=$(__get_dataset_zfs_prop origin ${_dataset})
-        if [ ${_origin} != "-" ] ; then
+        if [ ${_force} -eq 0 ] ; then
+            if [ "${_name}" = "default" ] ; then
+                _destroying="the user defaults!"
+            else
+                _fulluuid=$(__get_dataset_ioc_prop host_hostuuid ${_dataset})
+                _tag=$(__get_dataset_ioc_prop tag ${_dataset})
+                _destroying="${_fulluuid} (${_tag})"
+            fi
             echo
-            echo -n "WARNING: This will also destroy the origin snapshot if no"
-            echo " other clones remain!"
-            echo "Origin: ${_origin}"
-        fi
-        echo
-        echo -n "Are you sure ? y[N]: "
-        read _answer
+            echo "WARNING: This will destroy ${_destroying}"
+            echo "Dataset: ${_dataset}"
+            _origin=$(__get_dataset_zfs_prop origin ${_dataset})
+            if [ ${_origin} != "-" ] ; then
+                echo
+                echo -n "WARNING: This will also destroy the origin snapshot if no"
+                echo " other clones remain!"
+                echo "Origin: ${_origin}"
+            fi
+            echo
+            echo -n "Are you sure ? y[N]: "
+            read _answer
 
-        if [ "${_answer}" != "Y" -a "${_answer}" != "y" ] ; then
-            echo "Command not confirmed.  No action taken."
-            exit 1
+            if [ "${_answer}" != "Y" -a "${_answer}" != "y" ] ; then
+                echo "Command not confirmed.  No action taken."
+                exit 1
+            fi
         fi
-    fi
 
-    __destroy_jail ${_dataset} ${_force}
+        __destroy_jail ${_dataset} ${_force}
+    done
 }
 
 __cmd_df () {

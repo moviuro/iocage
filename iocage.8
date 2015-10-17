@@ -11,7 +11,7 @@
           [ftpdir=path] [\fIftpfiles=list\fP]
    \fBiocage\fP \fIcreate\fP [\fB-b\fP|\fB-c\fP|\fB-e\fP] [property=value]\.\.\.
    \fBiocage\fP \fIclone\fP [\fB-FP\fP] uuid|tag[@snapshot] [property=value]\.\.\.
-   \fBiocage\fP \fIdestroy\fP [\fB-f\fP] uuid|tag|ALL
+   \fBiocage\fP \fIdestroy\fP [\fB-f\fP] uuid|tag|ALL [uuid|tag [\.\.\.]]
    \fBiocage\fP \fIreset\fP uuid|tag|ALL
    \fBiocage\fP \fIlist\fP [\fB-H\fP] \fB-r\fP|[\fB-btnl\fP]
    \fBiocage\fP \fIstatus\fP [\fB-H\fP] [uuid|tag]
@@ -269,11 +269,11 @@ copy of the source jail's fstab in the \fIclone\fP:
 .fam T
 .fi
 .RE
-\fIdestroy\fP [\fB-f\fP] uuid|tag|ALL
+\fIdestroy\fP [\fB-f\fP] uuid|tag|ALL [uuid|tag [\.\.\.]]
 .PP
 .nf
 .fam C
-         Destroy given jail.  This is irreversible, use with caution.  If the
+         Destroy given jail(s).  This is irreversible, use with caution.  If the
          jail is running destroy action will fail.
 
          With -f the jail will be destroyed without confirmation.

@@ -7,7 +7,7 @@ SYNOPSIS
             [ftpdir=path] [ftpfiles=list]
      iocage create [-b|-c|-e] [property=value]...
      iocage clone [-FP] uuid|tag[@snapshot] [property=value]...
-     iocage destroy [-f] uuid|tag|ALL
+     iocage destroy [-f] uuid|tag|ALL [uuid|tag [...]]
      iocage reset uuid|tag|ALL
      iocage list [-H] -r|[-btnl]
      iocage status [-H] [uuid|tag]
@@ -184,9 +184,9 @@ DESCRIPTION
 
            # iocage clone -F www01@fresh tag=www03
 
-     destroy [-f] uuid|tag|ALL
+     destroy [-f] uuid|tag|ALL [uuid|tag [...]]
 
-         Destroy given jail.  This is irreversible, use with caution.  If the
+         Destroy given jail(s).  This is irreversible, use with caution.  If the
          jail is running destroy action will fail.
 
          With -f the jail will be destroyed without confirmation.
