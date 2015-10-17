@@ -133,10 +133,6 @@ __parse_cmd () {
                 __cmd_set "${@}"
                 exit
                 ;;
-            show)
-                __cmd_show "${@}"
-                exit
-                ;;
             snaplist)
                 __cmd_snaplist "${@}"
                 exit
@@ -706,16 +702,6 @@ __cmd_set () {
             __set_jail_prop "${_property}" ${_dataset}
         done
     done
-}
-
-__cmd_show () {
-    local _property
-
-    _property=${1}
-    __require_not_empty "${_property}" "Missing property name!"
-    __require_single_word "${_property}" "Invalid property name!"
-
-    __show ${_property}
 }
 
 __cmd_snaplist () {

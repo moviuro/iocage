@@ -439,27 +439,6 @@ __get_dataset_ioc_prop () {
     zfs get -Ho value ${module}:${_prop} ${_dataset}
 }
 
-__show () {
-    local _prop _jails _jail _uuid _tag _value
-
-    _prop=${1}
-
-    _jails=$(__find_jail ALL)
-
-    {
-        printf "%s^%s^%s\n" "UUID" "TAG" "${_prop}"
-
-        for _jail in ${_jails} ; do
-            _uuid=$(__get_dataset_ioc_prop host_hostuuid ${_jail})
-            _tag=$(__get_dataset_ioc_prop tag ${_jail})
-            _value=$(__get_jail_prop ${_prop} ${_jail}) ||
-                __fatal_error "Aborting."
-
-            printf "%s^%s^%s\n" "${_uuid}" "${_tag}" "${_value}"
-        done
-    } | column -ts^
-}
-
 __runtime () {
     local _dataset _fulluuid _params _param
 
