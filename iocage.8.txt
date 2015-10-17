@@ -11,16 +11,15 @@ SYNOPSIS
      iocage reset uuid|tag|ALL
      iocage list [-H] -r|[-btnl]
      iocage status [-H] [uuid|tag]
-     iocage start uuid|tag
-     iocage stop uuid|tag
-     iocage restart [-H] uuid|tag
+     iocage start uuid|tag [uuid|tag [...]]
+     iocage stop uuid|tag [uuid|tag [...]]
+     iocage restart [-H] uuid|tag [uuid|tag [...]] 
      iocage rcboot
      iocage rcshutdown
      iocage console uuid|tag
      iocage exec [-u username|-U username] uuid|tag|ALL command [arg]...
      iocage chroot uuid|tag [command [arg]...]
      iocage df [-p]
-     iocage show property
      iocage get [-H] property[,property[,...]]|all uuid|tag|ALL [uuid|tag [...]]
      iocage set property=value[,property=value[,...]] uuid|tag [uuid|tag [...]]
      iocage cap uuid|tag
@@ -250,17 +249,17 @@ DESCRIPTION
          USE - used space
          AVA - available space
 
-     start uuid|tag
+     start uuid|tag [uuid|tag [...]]
 
-         Start the jail identified by uuid or tag.
+         Start the jail(s) identified by uuid or tag.
 
-     stop uuid|tag
+     stop uuid|tag [uuid|tag [...]]
 
-         Stop the jail identified by uuid or tag.
+         Stop the jail(s) identified by uuid or tag.
 
-     restart [-H] uuid|tag
+     restart [-H] uuid|tag [uuid|tag [...]]
 
-         Restart the jail identified by uuid or tag.
+         Restart the jail(s) identified by uuid or tag.
 
          This method will by default restart the jail without destroying the
          jail's networking and the jail process itself.  All processes are
@@ -298,17 +297,6 @@ DESCRIPTION
          Chroot into jail, without actually starting the jail itself.  Useful
          for initial setup (set root password, configure networking).  You can
          specify a command just like with the normal system chroot tool.
-
-     show property
-
-         Show the given property for all jails and templates.  This is useful
-         for comparing settings/properties across all jails.
-
-         Example:
-
-         To get the last successfull start time for all jails:
-
-           # iocage show last_started
 
      get property[,property[,...]]|all [uuid|tag|ALL] [uuid|tag [...]]
 
