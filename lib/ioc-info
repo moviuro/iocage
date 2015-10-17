@@ -132,13 +132,13 @@ __list_jails () {
             # Print the short header.
             ??00)
                 printf "%s^%s^%s^%s^%s\n" \
-                       "JID" "UUID" "BOOT" "STATE" "TAG"
+                       "JID" "UUID" "BOOT" "STATUS" "TAG"
                 ;;
 
             # Print the long header.
             ??10)
                 printf "%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s\n" \
-                       "JID" "UUID" "BOOT" "STATE" "TAG" "IPV4" "IPV6" \
+                       "JID" "UUID" "BOOT" "STATUS" "TAG" "IPV4" "IPV6" \
                        "VNET" "TYPE" "INTERFACES" \
                        "VNET0_MAC" "VNET1_MAC" "VNET2_MAC" "VNET3_MAC"
                 ;;
