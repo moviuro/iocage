@@ -413,7 +413,7 @@ __get_zfs_prop () {
 
 # Set properties -------------------------------------------------------
 __set_jail_prop () {
-    local _property _dataset _pname _pval _CONF _prop _default
+    local _property _dataset _pname _pval _CONF _default
 
     _property=${1}
     _dataset=${2}
@@ -458,19 +458,17 @@ __set_jail_prop () {
            ${CONF_FTP}"
 
     if __is_in_ssv "${_pname}" ${_CONF} ; then
-        __set_dataset_ioc_prop ${_prop}="${_pval}" ${_dataset}
-    fi
-
-    if __is_in_ssv "${_pname}" ${CONF_ZFS} ; then
+        __set_dataset_ioc_prop ${_pname}="${_pval}" ${_dataset}
+    elif __is_in_ssv "${_pname}" ${CONF_ZFS} ; then
         # We have a few properties that should be read-only through iocage.
         eval _default=\$${_pname}
         [ "${_default}" != "readonly" ] ||
             __fatal_error "This property is read-only."
 
-        __set_dataset_zfs_prop ${_prop}="${_pval}" ${_dataset}
+        __set_dataset_zfs_prop ${_pname}="${_pval}" ${_dataset}
+    else
+        __fatal_error "Unsupported property: ${_pname}!"
     fi
-
-    __fatal_error "Unsupported property: ${_pname}!"
 }
 
 __set_dataset_zfs_prop () {
