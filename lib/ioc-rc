@@ -119,7 +119,7 @@ __start_jail () {
     fi
 
     if [ "${_jzfs}" = "on" ] ; then
-        zfs jail ioc-${_fulluuid} ${_jzfs_pool}/${_jzfs_dataset}
+        zfs jail ioc-${_fulluuid} ${_jzfs_dataset}
     fi
 
     __resolv_conf ${_dataset}
