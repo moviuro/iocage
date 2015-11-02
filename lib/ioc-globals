@@ -130,6 +130,7 @@ available="readonly"
 used="readonly"
 dedup="off"
 reservation="none"
+copies="1"
 
 # Sync properties
 sync_state="none"
