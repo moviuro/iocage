@@ -130,6 +130,7 @@ available="readonly"
 used="readonly"
 dedup="off"
 reservation="none"
+copies="1"
 
 # Sync properties
 sync_state="none"
@@ -252,7 +253,8 @@ CONF_ZFS="compression
           available
           used
           dedup
-          reservation"
+          reservation
+          copies"
 
 # ZFS sync (not used yet)
 CONF_SYNC="sync_state

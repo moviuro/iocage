@@ -968,6 +968,21 @@ PROPERTIES
          Default: lz4
          Source: zfs(8)
 
+     copies=1 | 2 | 3
+         Controls the number of copies of data stored for this dataset. These
+         copies are in addition to any redundancy provided by the pool, for
+         example, mirroring or RAID-Z. The copies are stored on different
+         disks, if possible. The space used by multiple copies is charged to
+         the associated file and dataset, changing the used property and
+         counting against quotas and reservations.
+
+         Changing this property only affects newly-written data. Therefore,
+         set this property at file system creation time by using the -o
+         copies=N option.
+
+         Default: 1
+         Source: zfs(8)
+
      origin
          This is only set for clones.  Read-only.
          For cloned file systems or volumes, the snapshot from which the clone

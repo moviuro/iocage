@@ -115,6 +115,7 @@ __configure_jail () {
             "compression");&
             "quota");&
             "dedup");&
+            "copies");&
             "reservation")
                 eval _value=\$iocset_${_prop_name}
                 ;;
