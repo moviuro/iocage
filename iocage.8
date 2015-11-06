@@ -1526,6 +1526,23 @@ Default: lz4
 Source: \fBzfs\fP(8)
 .RE
 .PP
+copies=1 | 2 | 3
+Controls the number of copies of data stored for this dataset. These
+copies are in addition to any redundancy provided by the pool, for
+example, mirroring or RAID-Z. The copies are stored on different
+disks, if possible. The space used by multiple copies is charged to
+the associated file and dataset, changing the used \fIproperty\fP and
+counting against quotas and reservations.
+.RS
+.PP
+Changing this \fIproperty\fP only affects newly-written data. Therefore,
+\fIset\fP this \fIproperty\fP at file system creation time by using the \fB-o\fP
+copies=N option.
+.PP
+Default: 1
+Source: \fBzfs\fP(8)
+.RE
+.PP
 origin
 .RS
 .TP
