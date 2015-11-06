@@ -25,7 +25,7 @@ SYNOPSIS
      iocage chroot uuid|tag [command [arg]...]
      iocage df [-p]
      iocage show property
-     iocage get [-H] property[,property[,...]]|all uuid|tag|ALL
+     iocage get [-H] {property[,property[,...]]|all} [uuid|tag|ALL]
      iocage set property=value uuid|tag
      iocage cap uuid|tag
      iocage limits [uuid|tag]
@@ -314,7 +314,7 @@ DESCRIPTION
 
            # iocage show last_started
 
-     get property[,property[,...]]|all [uuid|tag|ALL]
+     get {property[,property[,...]]|all} [uuid|tag|ALL]
 
          Get the named property or if "all" keyword is specified dump all
          properties known to iocage.  If no jail is specified or the keyword
