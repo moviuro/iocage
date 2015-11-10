@@ -29,7 +29,12 @@ unset LANG
 
 PATH=${PATH}:/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
 
-iocage_version="iocage gofast (2015/09/13)"
+if [ "${1}" = "-d" -o "${1}" = "--debug" ] ; then
+    set -x
+    shift
+fi
+
+iocage_version="iocage gofast (2015/11/10)"
 
 if [ "${1}" = "--version" -o "${1}" = "version" ] ; then
     echo "${iocage_version}"
