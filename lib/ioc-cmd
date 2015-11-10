@@ -181,8 +181,8 @@ __parse_cmd () {
                 exit
                 ;;
             *)
-                __usage
-                exit
+                __usage >&2
+                exit 1
                 ;;
         esac
         shift
